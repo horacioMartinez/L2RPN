@@ -51,10 +51,11 @@ class DoNothing_Attention_Agent(BaseAgent):
     the best solution.
     """
 
-    def __init__(self, action_space, alarms_lines_area, alarms_area_names):
+    def __init__(self, action_space, alarms_lines_area, alarms_area_names, name):
         BaseAgent.__init__(self, action_space)
         self.alarms_lines_area = alarms_lines_area
         self.alarms_area_names = alarms_area_names
+        self.name = name
 
     def act(self, observation, reward, done=False):
         """
@@ -105,13 +106,16 @@ class DoNothing_Attention_Agent(BaseAgent):
 
 
 def make_DoNothing_agent(env):
-    agent = DoNothing(env.action_space, env.observation_space, "nombreAleatorio")
+    agent = DoNothing(env.action_space, env.observation_space, "doNothing")
     return agent
 
 
 def make_DoNothingAttention_agent(env):
     agent = DoNothing_Attention_Agent(
-        env.action_space, env.alarms_lines_area, env.alarms_area_names
+        env.action_space,
+        env.alarms_lines_area,
+        env.alarms_area_names,
+        "doNothingAttention",
     )
     return agent
 

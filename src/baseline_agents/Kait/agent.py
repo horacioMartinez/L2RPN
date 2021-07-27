@@ -10,6 +10,7 @@ from grid2op.Agent import BaseAgent
 
 class Agent(BaseAgent):
     def __init__(self, env, state_mean, state_std, **kwargs):
+        self.name = "Kait"
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.obs_space = env.observation_space
         self.action_space = env.action_space
