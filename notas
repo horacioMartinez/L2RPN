@@ -1,0 +1,11 @@
+bridge — Today at 5:59 AM
+  Hi Benjamin, I found in the config file
+  LINES2ATTACK = ["62_58_180", "62_63_160", "48_50_136", "48_53_141", "41_48_131", "39_41_121",
+                    "43_44_125", "44_45_126", "34_35_110", "54_58_154"]
+  It seems strange for me .... what should I do to find the line's index?
+
+Benjamin D. — Today at 6:00 AM
+  Hello,
+  Yes indeed we calibrated the opponent to "attack" only these lines
+  You have the attribute (accessible in all classes): env.name_line (or obs.name_line, or act.name_line etc.)
+  That gives you the name of the powerlines

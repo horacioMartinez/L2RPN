@@ -16,7 +16,7 @@ import torch
 import os
 from grid2op.Runner import Runner
 from l2rpn_baselines.utils.save_log_gif import save_log_gif
-from rl_agent import RLAgent
+from track1.rl_agent import RLAgent
 import argparse
 import grid2op
 from lightsim2grid.LightSimBackend import LightSimBackend
@@ -25,7 +25,9 @@ from lightsim2grid.LightSimBackend import LightSimBackend
 def parse_args():
     parser = argparse.ArgumentParser(description="Eval baseline RLAgent")
     parser.add_argument(
-        "--load_path", default="./saved_files", help="The path to the model [.h5]"
+        "--load_path",
+        default="/home/horacio/git/competition/trained-models/PARL/saved_files",
+        help="The path to the model [.h5]",
     )
     parser.add_argument(
         "--logs_path",
@@ -62,7 +64,7 @@ def parse_args():
 
 def evaluate(
     env,
-    load_path="saved_files",
+    load_path="/home/horacio/git/competition/trained-models/PARL/saved_files",
     logs_path=None,
     nb_episode=1,
     nb_process=1,
