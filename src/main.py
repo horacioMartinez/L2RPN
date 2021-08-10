@@ -12,7 +12,11 @@ from baseline_agents.DoNothing import make_DoNothing_agent
 from baseline_agents.DoNothing import make_DoNothingAttention_agent
 from baseline_agents.Kait.submission import make_agent as make_Kait_agent
 from baseline_agents.PARL.track1.wrapper import make_PARL_agent
+from baseline_agents.ExpertAgent.wrapper import make_expert_agent
 from grid2op.Runner import Runner
+from grid2op.Episode import EpisodeReplay
+
+from my_agent import make_agent
 
 # env = grid2op.make(track, backend=BACKEND(), reward_class=RedispReward)
 BACKEND = LightSimBackend
@@ -20,7 +24,7 @@ BACKEND = LightSimBackend
 number_of_scenarios = 2
 
 
-def scoreAgent(make_agent, competition):
+def scoreAgent(make_agent, competition, saveGif):
     if competition == 2020:
         scoring_function = ScoreL2RPN2020
         track = "l2rpn_neurips_2020_track1_small"
@@ -38,13 +42,8 @@ def scoreAgent(make_agent, competition):
         verbose=2,
     )
     print("STARTING THE EVALUATION")
-    result = my_score.get(
-        agent,
-        path_save=(
-            "/home/horacio/git/competition/L2RPN/src/evaluation-output-data/"
-            + agent.name
-        ),
-    )
+    path_save = "/home/horacio/git/competition/L2RPN/src/evaluation-output-data/" + agent.name
+    result = my_score.get(agent, path_save)
     print("ENDING THE EVALUATION")
 
     if competition == 2020:
@@ -61,6 +60,15 @@ def scoreAgent(make_agent, competition):
             print("Time steps survived: ", time_steps_survived[i])
             print("Total time steps: ", total_timesteps[i])
 
+    if saveGif:
+        for episode_id in range(0, number_of_scenarios):
+            meta_data_dn = my_score.stat_dn.get_metadata()
+            this_ep_nm = meta_data_dn[f"{episode_id}"]["scenario_name"]
+            gif_name = this_ep_nm
+            print("Creating {}.gif".format(gif_name))
+            plot_epi = EpisodeReplay(path_save)
+            plot_epi.replay_episode(episode_id=this_ep_nm, gif_name=gif_name, display=False)
+
 
 # agent = make_Kait_agent(
 #    env, "/home/horacio/git/competition/L2RPN/src/baseline_agents/Kait/"
@@ -70,5 +78,7 @@ def scoreAgent(make_agent, competition):
 # agent = make_DoNothing_agent(env)
 
 
-scoreAgent(make_DoNothing_agent, 2021)
 # scoreAgent(make_PARL_agent, 2020)
+scoreAgent(make_DoNothing_agent, 2021, True)
+# scoreAgent(make_expert_agent, 2021, True)
+# scoreAgent(make_agent, 2021, True)

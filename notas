@@ -9,3 +9,11 @@ Benjamin D. — Today at 6:00 AM
   Yes indeed we calibrated the opponent to "attack" only these lines
   You have the attribute (accessible in all classes): env.name_line (or obs.name_line, or act.name_line etc.)
   That gives you the name of the powerlines
+  
+  
+
+  
+https://ogb.stanford.edu/docs/leader_graphprop/
+
+https://arxiv.org/abs/2005.03675
+https://www.cs.mcgill.ca/~wlh/grl_book/

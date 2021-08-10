@@ -1,20 +1,28 @@
-
 from grid2op.Agent import BaseAgent
+
 
 class MyAgent(BaseAgent):
     """
-    The template to be used to create an agent: any controller of the power grid is expected to be a subclass of this
-    grid2op.Agent.BaseAgent.
+    This is the most basic BaseAgent. It is purely passive, and does absolutely nothing.
+    As opposed to most reinforcement learning environments, in grid2op, doing nothing is often
+    the best solution.
     """
-    def __init__(self, action_space):
-        """Initialize a new agent."""
-        BaseAgent.__init__(self, action_space=action_space)
 
-    def act(self, observation, reward, done):
-        """The action that your agent will choose depending on the observation, the reward, and whether the state is terminal"""
-        # do nothing for example (with the empty dictionary) :
-        return self.action_space({})
-    
-def make_agent(env, this_directory_path):
-    my_agent = MyAgent(env.action_space)
+    def __init__(self, env, action_space, name):
+        BaseAgent.__init__(self, action_space)
+        self.env = env
+        self.name = name
+
+    def act(self, observation, reward, done=False):
+        self.action_space()
+        numberOfActionsIncludingIllegalOnes = self.action_space.size()
+        print(numberOfActionsIncludingIllegalOnes)
+        # doNothingActionVerifyngLegality = self.action_space({}, True, self.env)
+        random_action = self.action_space.sample()
+        print(random_action)
+        return random_action
+
+
+def make_agent(env):
+    my_agent = MyAgent(env, env.action_space, "nombreMiAgente")
     return my_agent
