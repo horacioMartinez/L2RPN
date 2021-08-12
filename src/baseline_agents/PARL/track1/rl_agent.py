@@ -34,33 +34,25 @@ class RLAgent(BaseAgent):
         self.combined_model_2 = CombinedActionModel()
         self.unitary_model = UnitaryActionModel()
 
-        unitary_actions_vec = np.load(
-            os.path.join(trained_models_path, "v6_top500_unitary_actions.npz")
-        )["actions"]
+        unitary_actions_vec = np.load(os.path.join(trained_models_path, "v6_top500_unitary_actions.npz"))["actions"]
         self.unitary_actions = []
         for i in range(unitary_actions_vec.shape[0]):
             action = action_space.from_vect(unitary_actions_vec[i])
             self.unitary_actions.append(action)
 
-        redispatch_actions_vec = np.load(
-            os.path.join(trained_models_path, "redispatch_actions.npz")
-        )["actions"]
+        redispatch_actions_vec = np.load(os.path.join(trained_models_path, "redispatch_actions.npz"))["actions"]
         self.redispatch_actions = []
         for i in range(redispatch_actions_vec.shape[0]):
             action = action_space.from_vect(redispatch_actions_vec[i])
             self.redispatch_actions.append(action)
 
-        with open(
-            os.path.join(trained_models_path, "action_to_sub_id.pickle"), "rb"
-        ) as f:
+        with open(os.path.join(trained_models_path, "action_to_sub_id.pickle"), "rb") as f:
             self.action_to_sub_id = pickle.load(f)
 
         self.after_line56_or_line45_disconnect_actions = []
         self.three_sub_action_to_sub_ids = {}
 
-        actions_vec = np.load(
-            os.path.join(trained_models_path, "v10_merge_three_sub_actions.npz")
-        )["actions"]
+        actions_vec = np.load(os.path.join(trained_models_path, "v10_merge_three_sub_actions.npz"))["actions"]
         for i in range(actions_vec.shape[0]):
             action = action_space.from_vect(actions_vec[i])
             self.after_line56_or_line45_disconnect_actions.append(action)
@@ -86,9 +78,7 @@ class RLAgent(BaseAgent):
             offset += sub_elem_num
 
         self.observation = None
-        self.feature_processor = FeatureProcessor(
-            os.path.join(trained_models_path, "track1_scalar.npz")
-        )
+        self.feature_processor = FeatureProcessor(os.path.join(trained_models_path, "track1_scalar.npz"))
         self.unitary_feature_processor = UnitaryFeatureProcessor(
             os.path.join(trained_models_path, "track1_unitary_scalar.npz")
         )
@@ -106,15 +96,9 @@ class RLAgent(BaseAgent):
         return action
 
     def load(self, path):
-        self.combined_model_1.load_state_dict(
-            torch.load(os.path.join(path, "combined_model_1.pth"))
-        )
-        self.combined_model_2.load_state_dict(
-            torch.load(os.path.join(path, "combined_model_2.pth"))
-        )
-        self.unitary_model.load_state_dict(
-            torch.load(os.path.join(path, "unitary_model.pth"))
-        )
+        self.combined_model_1.load_state_dict(torch.load(os.path.join(path, "combined_model_1.pth")))
+        self.combined_model_2.load_state_dict(torch.load(os.path.join(path, "combined_model_2.pth")))
+        self.unitary_model.load_state_dict(torch.load(os.path.join(path, "unitary_model.pth")))
 
     def save(self, path):
         torch.save(
@@ -125,16 +109,11 @@ class RLAgent(BaseAgent):
             self.combined_model_2.state_dict(),
             os.path.join(path, "combined_model_2.pth"),
         )
-        torch.save(
-            self.unitary_model.state_dict(), os.path.join(path, "unitary_model.pth")
-        )
+        torch.save(self.unitary_model.state_dict(), os.path.join(path, "unitary_model.pth"))
 
     def _try_combine_with_redispatch(self, observation, action):
         if (
-            (
-                observation.line_status[45] == False
-                or observation.line_status[56] == False
-            )
+            (observation.line_status[45] == False or observation.line_status[56] == False)
             and action != self.do_nothing_action
             and self.redispatch_cnt < self.max_redispatch_cnt
             and action.impact_on_objects()["topology"]["changed"]
@@ -155,9 +134,7 @@ class RLAgent(BaseAgent):
             least_rho = origin_rho
             best_action = None
             for redispatch_action in self.redispatch_actions:
-                combine_action = self.action_space.from_vect(
-                    action.to_vect() + redispatch_action.to_vect()
-                )
+                combine_action = self.action_space.from_vect(action.to_vect() + redispatch_action.to_vect())
                 (
                     obs_simulate,
                     reward_simulate,
@@ -165,10 +142,7 @@ class RLAgent(BaseAgent):
                     info_simulate,
                 ) = observation.simulate(combine_action)
                 observation._obs_env._reset_to_orig_state()
-                assert (
-                    not info_simulate["is_illegal"]
-                    and not info_simulate["is_ambiguous"]
-                )
+                assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
 
                 max_rho = 10.0
                 if not done_simulate:
@@ -222,8 +196,7 @@ class RLAgent(BaseAgent):
 
         if done_simulate or has_overflow:
             if (
-                self.observation.line_status[56] == False
-                or self.observation.line_status[45] == False
+                self.observation.line_status[56] == False or self.observation.line_status[45] == False
             ) and not self.used_combine_actions:
                 action = self._three_sub_action()
                 if action is not None:
@@ -324,10 +297,7 @@ class RLAgent(BaseAgent):
                 ) = self.observation.simulate(legal_action)
                 self.observation._obs_env._reset_to_orig_state()
 
-                assert (
-                    not info_simulate["is_illegal"]
-                    and not info_simulate["is_ambiguous"]
-                )
+                assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
 
                 if done_simulate:
                     continue
@@ -415,9 +385,7 @@ class RLAgent(BaseAgent):
             if not np.all(self.observation.target_dispatch == 0.0):
                 gen_ids = np.where(self.observation.gen_redispatchable)[0]
                 gen_ramp = self.observation.gen_max_ramp_up[gen_ids]
-                changed_idx = np.where(
-                    self.observation.target_dispatch[gen_ids] != 0.0
-                )[0]
+                changed_idx = np.where(self.observation.target_dispatch[gen_ids] != 0.0)[0]
                 redispatchs = []
                 for idx in changed_idx:
                     target_value = self.observation.target_dispatch[gen_ids][idx]
@@ -434,16 +402,9 @@ class RLAgent(BaseAgent):
                 ) = self.observation.simulate(act)
                 self.observation._obs_env._reset_to_orig_state()
 
-                assert (
-                    not info_simulate["is_illegal"]
-                    and not info_simulate["is_ambiguous"]
-                )
+                assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
 
-                if (
-                    not done_simulate
-                    and obs_simulate is not None
-                    and not any(np.isnan(obs_simulate.rho))
-                ):
+                if not done_simulate and obs_simulate is not None and not any(np.isnan(obs_simulate.rho)):
                     if np.max(obs_simulate.rho) < 1.0:
                         return act
 
@@ -460,9 +421,7 @@ class RLAgent(BaseAgent):
                         and self.observation.time_before_cooldown_sub[sub_id] == 0
                     ):
                         sub_id = 28
-                        act = self.action_space(
-                            {"set_bus": {"substations_id": [(sub_id, sub28_topo)]}}
-                        )
+                        act = self.action_space({"set_bus": {"substations_id": [(sub_id, sub28_topo)]}})
 
                         (
                             obs_simulate,
@@ -471,30 +430,16 @@ class RLAgent(BaseAgent):
                             info_simulate,
                         ) = self.observation.simulate(act)
                         self.observation._obs_env._reset_to_orig_state()
-                        assert (
-                            not info_simulate["is_illegal"]
-                            and not info_simulate["is_ambiguous"]
-                        )
-                        if (
-                            not done_simulate
-                            and obs_simulate is not None
-                            and not any(np.isnan(obs_simulate.rho))
-                        ):
+                        assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
+                        if not done_simulate and obs_simulate is not None and not any(np.isnan(obs_simulate.rho)):
                             if np.max(obs_simulate.rho) < 0.95:
                                 return act
                     continue
 
-                if (
-                    np.any(sub_topo == 2)
-                    and self.observation.time_before_cooldown_sub[sub_id] == 0
-                ):
+                if np.any(sub_topo == 2) and self.observation.time_before_cooldown_sub[sub_id] == 0:
                     sub_topo = np.where(sub_topo == 2, 1, sub_topo)  # bus 2 to bus 1
-                    sub_topo = np.where(
-                        sub_topo == -1, 0, sub_topo
-                    )  # don't do action in bus=-1
-                    reconfig_sub = self.action_space(
-                        {"set_bus": {"substations_id": [(sub_id, sub_topo)]}}
-                    )
+                    sub_topo = np.where(sub_topo == -1, 0, sub_topo)  # don't do action in bus=-1
+                    reconfig_sub = self.action_space({"set_bus": {"substations_id": [(sub_id, sub_topo)]}})
 
                     (
                         obs_simulate,
@@ -504,35 +449,21 @@ class RLAgent(BaseAgent):
                     ) = self.observation.simulate(reconfig_sub)
                     self.observation._obs_env._reset_to_orig_state()
 
-                    assert (
-                        not info_simulate["is_illegal"]
-                        and not info_simulate["is_ambiguous"]
-                    )
+                    assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
 
                     if not done_simulate:
-                        assert np.any(
-                            obs_simulate.topo_vect != self.observation.topo_vect
-                        )  # have some impact
+                        assert np.any(obs_simulate.topo_vect != self.observation.topo_vect)  # have some impact
 
-                    if (
-                        not done_simulate
-                        and obs_simulate is not None
-                        and not any(np.isnan(obs_simulate.rho))
-                    ):
+                    if not done_simulate and obs_simulate is not None and not any(np.isnan(obs_simulate.rho)):
                         if np.max(obs_simulate.rho) < 0.95:
                             return reconfig_sub
 
         if np.max(self.observation.rho) >= 1.0:
             sub_id = 28
             sub_topo = self.sub_toop_dict[sub_id]
-            if (
-                np.any(sub_topo == 2)
-                and self.observation.time_before_cooldown_sub[sub_id] == 0
-            ):
+            if np.any(sub_topo == 2) and self.observation.time_before_cooldown_sub[sub_id] == 0:
                 sub28_topo = np.array([1, 1, 1, 1, 1])
-                act = self.action_space(
-                    {"set_bus": {"substations_id": [(sub_id, sub28_topo)]}}
-                )
+                act = self.action_space({"set_bus": {"substations_id": [(sub_id, sub28_topo)]}})
 
                 (
                     obs_simulate,
@@ -541,15 +472,8 @@ class RLAgent(BaseAgent):
                     info_simulate,
                 ) = self.observation.simulate(act)
                 self.observation._obs_env._reset_to_orig_state()
-                assert (
-                    not info_simulate["is_illegal"]
-                    and not info_simulate["is_ambiguous"]
-                )
-                if (
-                    not done_simulate
-                    and obs_simulate is not None
-                    and not any(np.isnan(obs_simulate.rho))
-                ):
+                assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
+                if not done_simulate and obs_simulate is not None and not any(np.isnan(obs_simulate.rho)):
                     if np.max(obs_simulate.rho) < 0.99:
                         return act
 
@@ -577,10 +501,7 @@ class RLAgent(BaseAgent):
                 ) = self.observation.simulate(action)
                 self.observation._obs_env._reset_to_orig_state()
 
-                if (
-                    np.max(self.observation.rho) < 1.0
-                    and np.max(obs_simulate.rho) >= 1.0
-                ):
+                if np.max(self.observation.rho) < 1.0 and np.max(obs_simulate.rho) >= 1.0:
                     continue
 
                 return action

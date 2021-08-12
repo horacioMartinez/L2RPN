@@ -24,9 +24,7 @@ from lightsim2grid.LightSimBackend import LightSimBackend
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Eval baseline RLAgent")
-    parser.add_argument(
-        "--load_path", default="./saved_files", help="The path to the model [.h5]"
-    )
+    parser.add_argument("--load_path", default="./saved_files", help="The path to the model [.h5]")
     parser.add_argument(
         "--logs_path",
         required=False,
@@ -100,9 +98,7 @@ def evaluate(
     for _, chron_name, cum_reward, nb_time_step, max_ts in res:
         msg_tmp = "\tFor chronics located at {}\n".format(chron_name)
         msg_tmp += "\t\t - cumulative reward: {:.6f}\n".format(cum_reward)
-        msg_tmp += "\t\t - number of time steps completed: {:.0f} / {:.0f}".format(
-            nb_time_step, max_ts
-        )
+        msg_tmp += "\t\t - number of time steps completed: {:.0f} / {:.0f}".format(nb_time_step, max_ts)
         print(msg_tmp)
 
     if save_gif:

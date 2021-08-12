@@ -38,8 +38,7 @@ class CombinedActionModel(nn.Module):
 class UnitaryActionModel(nn.Module):
     def __init__(self):
         super(UnitaryActionModel, self).__init__()
-        self.linear_1 = nn.Sequential(
-            nn.Linear(198 - 59 + 64 * 2, 512), nn.ReLU())  # remove p
+        self.linear_1 = nn.Sequential(nn.Linear(198 - 59 + 64 * 2, 512), nn.ReLU())  # remove p
         self.linear_2 = nn.Sequential(nn.Linear(512, 512), nn.ReLU())
         self.linear_3 = nn.Sequential(nn.Linear(512, 512), nn.ReLU())
         self.linear_4 = nn.Sequential(nn.Linear(512, 512), nn.ReLU())

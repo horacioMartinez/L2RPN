@@ -10,10 +10,76 @@ Benjamin D. — Today at 6:00 AM
   You have the attribute (accessible in all classes): env.name_line (or obs.name_line, or act.name_line etc.)
   That gives you the name of the powerlines
   
-  
+Configuracion opponent neurips 2021:
 
-  
+lines_attacked = ["62_58_180", "62_63_160", "48_50_136", "48_53_141", "41_48_131", "39_41_121",
+                  "43_44_125", "44_45_126", "34_35_110", "54_58_154"]
+
+opponent_attack_cooldown = 12  # 1 hour, 1 hour being 12 time steps
+opponent_attack_duration = 96  # 8 hours at maximum
+opponent_budget_per_ts = 0.17  # opponent_attack_duration / opponent_attack_cooldown + epsilon
+opponent_init_budget = 144.  # no need to attack straightfully, it can attack starting at midday the first day
+
+
 https://ogb.stanford.edu/docs/leader_graphprop/
-
 https://arxiv.org/abs/2005.03675
 https://www.cs.mcgill.ca/~wlh/grl_book/
+
+
+Convertir gif a png: $ convert Scenario_april_000.gif target.png
+
+Como es que a mi me da de maximo 519 acciones pero PARL dice que lo reduce a 1000 acciones en el paper?
+
+En el PARL me da que hay 494 acciones posibles si hay el print de self_action_space.size().
+Sera que las 1000 acciones son combinando varias?.
+
+
+crisco — 08/10/2021
+
+Quick question about action space size. In the grid2op getting started notebook 4 (04_TrainingAnAgent.ipynb) the random agent encodes actions as integers. Playing around with this I noticed the agent generated numbers from 0-450 inclusive (this is on the rte_case14_redisp environment) 
+however when calling env.action_space.n to get the size of the action space this returned the value 157. What is the cause of the mismatch are not all the randomly generated integers unique possible actions?
+Benjamin D. — 08/10/2021
+Hello,
+This is a really good question :blush:
+
+In fact it depends on what you counts, and how you count it.
+
+The action space is both discrete (for topology and line status) and countinuous (for redispatching and curtailment). As far as I know there is no direct definition of "dimensions" in this case. And it all comes down to how you count discrete actions.
+For example, you can say you discretize everything (transforming redispatching and curtailment to discrete value) and then you count (because now every actions is discrete you can do that) how many possible different actions you have. This will give 450 or something like that.
+Another way is to count it more like "continuous space", which is:
+- you got 1 dimension per generator for the redispatching
+- 1 dimension per generator for the curtailment (if activated, I don't remember for this env in particular)
+- 1 dimension for each powerline (i set it to "connected" or set it to "disconnected" or don't set it at all)
+- 1 dimension for each powerline change status
+- 1 dimension for each element (set bus)
+-1 dimension for each element (change bus)
+
+And if you count it like that, you get 157, this is the way it's encoded by default in grid2op.
+You can also mix things and get pretty much all numbers in between (for example you keep counting the countinuous actions like the second method I mentioned, but counts the unitary actions for the discrete ones)
+
+
+Idea.. armar 'buckets' segun conexiones del grafico y loads/generators en cada una.
+Podemos hacer search para hallar la accion de conexion/desconexion/redispatch que lleve a la mejor bucket ??.
+
+matriz de incidencia/ algo asi ???
+
+grafico siempre igual, ver de no cortar lineas y solo redispatch generators y cambiar buses??
+
+
+Parametros de competencia:
+  "competition": {
+    "NO_OVERFLOW_DISCONNECTION":  false, // Se desconecta linea cuando hay supera su termal limit
+    "NB_TIMESTEP_OVERFLOW_ALLOWED": 3, // Number of timesteps for which a soft overflow is allowed, default 2. This means that a powerline will be disconnected (if :attr:`.NO_OVERFLOW_DISCONNECTION` is set to ``False``) after 2 time steps above its thermal limit. This is called a "soft overflow".
+    "NB_TIMESTEP_COOLDOWN_SUB": 3, // When someone changes the topology of a substations, this number indicates how many timesteps the :class:`grid2op.Agent.BaseAgent` has to wait before being able to modify the topology on this same substation. It has the same behaviour as :attr:`Parameters.NB_TIMESTEP_LINE_STATUS_REMODIF`.
+    "NB_TIMESTEP_COOLDOWN_LINE": 3, // When someone acts on a powerline by changing its status (connected / disconnected) this number indicates how many timesteps the :class:`grid2op.Agent.BaseAgent` has to wait before being able to modify this status again. For examle, if this is 1, this means that an BaseAgent can act on status of a powerline 1 out of 2 time step (1 time step it acts, another one it cools down, and the next one it can act again). Having it at 0 it equivalent to deactivate this feature (default).
+    "HARD_OVERFLOW_THRESHOLD": 2, // If a the powerflow on a line is above HARD_OVERFLOW_THRESHOLD * thermal limit (and attr:`Parameters.NO_OVERFLOW_DISCONNECTION` is set to ``False``) then it is automatically disconnected, regardless of the number of timesteps it is on overflow). This is called a "hard overflow". This is expressed in relative value of the thermal limits, for example, if for a powerline the `thermal_limit` is 150 and the HARD_OVERFLOW_THRESHOLD is 2.0, then if the flow on the powerline reaches 2 * 150 = 300.0 the powerline the powerline is automatically disconnected.
+    "NB_TIMESTEP_RECONNECTION": 12, // Number of timesteps a powerline disconnected for security motives (for example due to :attr:`.NB_TIMESTEP_POWERFLOW_ALLOWED` or :attr:`.HARD_OVERFLOW_THRESHOLD`) will remain disconnected.
+    "IGNORE_MIN_UP_DOWN_TIME": true, // Whether or not to ignore the attributes `gen_min_uptime` and `gen_min_downtime`. Basically setting this parameter to ``True``
+    "ALLOW_DISPATCH_GEN_SWITCH_OFF": true, // allow dispatch on turned off generator (if ``True`` you can actually dispatch a turned on geenrator)
+    "ENV_DC": false,
+    "FORECAST_DC": false,
+    "MAX_SUB_CHANGED": 1, // Maximum number of substations that can be reconfigured between two consecutive timesteps by an :class:`grid2op.Agent.BaseAgent`. Default value is 1.
+    "MAX_LINE_STATUS_CHANGED": 1, // Maximum number of powerlines statuses that can be changed between two consecutive timesteps by an :class:`grid2op.Agent.BaseAgent`. Default value is 1.
+    "ALARM_BEST_TIME": 7, // Number of step for which it's best to send an alarm BEFORE a game over
+    "ALARM_WINDOW_SIZE": 5 // Number of steps for which it's worth it to give an alarm (if an alarm is send outside of the window `[ALARM_BEST_TIME - ALARM_WINDOW_SIZE, ALARM_BEST_TIME + ALARM_WINDOW_SIZE]` then it does not grant anything
+  }

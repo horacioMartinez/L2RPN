@@ -1,3 +1,4 @@
+import time
 import grid2op
 from grid2op.Agent import DoNothing
 from l2rpn_baselines.DoubleDuelingDQN import train
@@ -18,7 +19,9 @@ from grid2op.Episode import EpisodeReplay
 
 from my_agent import make_agent
 
+
 # env = grid2op.make(track, backend=BACKEND(), reward_class=RedispReward)
+start_time = time.time()
 BACKEND = LightSimBackend
 
 number_of_scenarios = 2
@@ -78,7 +81,8 @@ def scoreAgent(make_agent, competition, saveGif):
 # agent = make_DoNothing_agent(env)
 
 
-# scoreAgent(make_PARL_agent, 2020)
-scoreAgent(make_DoNothing_agent, 2021, True)
+# scoreAgent(make_PARL_agent, 2020, False)
+# scoreAgent(make_DoNothing_agent, 2021, True)
 # scoreAgent(make_expert_agent, 2021, True)
-# scoreAgent(make_agent, 2021, True)
+scoreAgent(make_agent, 2021, False)
+print("--- %s seconds ---" % (time.time() - start_time))

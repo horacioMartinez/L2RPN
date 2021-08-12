@@ -23,8 +23,7 @@ class FeatureProcessor(object):
 
         zero_std = np.where(std == 0.0)[0]
 
-        mean = np.array(
-            [mean[i] for i in range(len(mean)) if i not in zero_std])
+        mean = np.array([mean[i] for i in range(len(mean)) if i not in zero_std])
         std = np.array([std[i] for i in range(len(std)) if i not in zero_std])
 
         self.mean = mean
@@ -35,32 +34,30 @@ class FeatureProcessor(object):
         obs = raw_obs.to_dict()
 
         loads = []
-        for key in obs['loads']:
-            loads.append(obs['loads'][key])
+        for key in obs["loads"]:
+            loads.append(obs["loads"][key])
         loads = np.concatenate(loads)
 
         prods = []
-        for key in obs['prods']:
-            prods.append(obs['prods'][key])
+        for key in obs["prods"]:
+            prods.append(obs["prods"][key])
         prods = np.concatenate(prods)
 
         lines_or = []
-        for key in obs['lines_or']:
-            lines_or.append(obs['lines_or'][key])
+        for key in obs["lines_or"]:
+            lines_or.append(obs["lines_or"][key])
         lines_or = np.concatenate(lines_or)
 
         lines_ex = []
-        for key in obs['lines_ex']:
-            lines_ex.append(obs['lines_ex'][key])
+        for key in obs["lines_ex"]:
+            lines_ex.append(obs["lines_ex"][key])
         lines_ex = np.concatenate(lines_ex)
 
         features = np.concatenate([loads, prods, lines_or, lines_ex])
-        features = np.array([
-            features[i] for i in range(len(features)) if i not in self.zero_std
-        ])
+        features = np.array([features[i] for i in range(len(features)) if i not in self.zero_std])
         norm_features = (features - self.mean) / self.std
 
-        rho = obs['rho'] - 1.0
+        rho = obs["rho"] - 1.0
 
         other_features = rho
         return np.concatenate([norm_features, other_features]).tolist()
@@ -74,8 +71,7 @@ class UnitaryFeatureProcessor(object):
 
         zero_std = np.where(std == 0.0)[0]
 
-        mean = np.array(
-            [mean[i] for i in range(len(mean)) if i not in zero_std])
+        mean = np.array([mean[i] for i in range(len(mean)) if i not in zero_std])
         std = np.array([std[i] for i in range(len(std)) if i not in zero_std])
 
         self.mean = mean
@@ -86,22 +82,20 @@ class UnitaryFeatureProcessor(object):
         obs = raw_obs.to_dict()
 
         loads = []
-        for key in ['q', 'v']:
-            loads.append(obs['loads'][key])
+        for key in ["q", "v"]:
+            loads.append(obs["loads"][key])
         loads = np.concatenate(loads)
 
         prods = []
-        for key in ['q', 'v']:
-            prods.append(obs['prods'][key])
+        for key in ["q", "v"]:
+            prods.append(obs["prods"][key])
         prods = np.concatenate(prods)
 
         features = np.concatenate([loads, prods])
-        features = np.array([
-            features[i] for i in range(len(features)) if i not in self.zero_std
-        ])
+        features = np.array([features[i] for i in range(len(features)) if i not in self.zero_std])
         norm_features = (features - self.mean) / self.std
 
-        rho = obs['rho']
+        rho = obs["rho"]
         time_info = np.array([raw_obs.month - 1, raw_obs.hour_of_day])
 
         return np.concatenate([norm_features, rho, time_info]).tolist()
