@@ -81,7 +81,7 @@ def scoreAgent(make_agent, competition, saveGif):
 # agent = make_DoNothing_agent(env)
 
 
-# scoreAgent(make_PARL_agent, 2020, False)
+# scoreAgent(make_PARL_agent, 2021, False)
 # scoreAgent(make_DoNothing_agent, 2021, True)
 # scoreAgent(make_expert_agent, 2021, True)
 scoreAgent(make_agent, 2021, False)
