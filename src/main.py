@@ -1,3 +1,4 @@
+import sys
 import time
 import grid2op
 from grid2op.Agent import DoNothing
@@ -12,8 +13,9 @@ from baseline_agents.DoubleDuelingDQN import make_D3QN_agent
 from baseline_agents.DoNothing import make_DoNothing_agent
 from baseline_agents.DoNothing import make_DoNothingAttention_agent
 from baseline_agents.Kait.submission import make_agent as make_Kait_agent
-from baseline_agents.PARL.track1.wrapper import make_PARL_agent
+from baseline_agents.PARL.track1.wrapper import make_PARL_agent  # First place
 from baseline_agents.ExpertAgent.wrapper import make_expert_agent
+from baseline_agents.L2RPN_NIPS_2020_a_PPO_Solution.submission.wrapper import make_PPO_agent  # Second place
 from grid2op.Runner import Runner
 from grid2op.Episode import EpisodeReplay
 
@@ -24,7 +26,7 @@ from my_agent import make_agent
 start_time = time.time()
 BACKEND = LightSimBackend
 
-number_of_scenarios = 2
+number_of_scenarios = -1
 
 
 def scoreAgent(make_agent, competition, saveGif):
@@ -54,14 +56,28 @@ def scoreAgent(make_agent, competition, saveGif):
         return
     else:
         all_scores, time_steps_survived, total_timesteps = result
+        averageTotalScore = 0
+        averageOpScore = 0
+        averageAlarmScore = 0
+        averageTimestepsSurvived = 0
         for i in range(0, number_of_scenarios):
             print("---------")
             print("Sceneario ", i, ":")
             print("Total score: ", all_scores[i][0])
+            averageTotalScore += all_scores[i][0]
             print("Operational Score: ", all_scores[i][1])
+            averageOpScore += all_scores[i][1]
             print("Alarm Score: ", all_scores[i][2])
+            averageAlarmScore += all_scores[i][2]
             print("Time steps survived: ", time_steps_survived[i])
+            averageTimestepsSurvived += time_steps_survived[i]
             print("Total time steps: ", total_timesteps[i])
+        print("---------")
+        print("Average results>>>>>")
+        print("Average score: ", averageTotalScore / number_of_scenarios)
+        print("Average operational score: ", averageOpScore / number_of_scenarios)
+        print("Average alarm score: ", averageAlarmScore / number_of_scenarios)
+        print("Average time steps survived: ", averageTimestepsSurvived / number_of_scenarios)
 
     if saveGif:
         for episode_id in range(0, number_of_scenarios):
@@ -80,9 +96,28 @@ def scoreAgent(make_agent, competition, saveGif):
 # agent = make_DoNothingAttention_agent(env)
 # agent = make_DoNothing_agent(env)
 
+if len(sys.argv) < 3:
+    print("Not enough arguments. USAGE: <AgentName> <NumScenarios>")
+    exit()
 
-# scoreAgent(make_PARL_agent, 2021, False)
-# scoreAgent(make_DoNothing_agent, 2021, True)
-# scoreAgent(make_expert_agent, 2021, True)
-scoreAgent(make_agent, 2021, False)
+selectedAgent = str(sys.argv[1])
+number_of_scenarios = int(sys.argv[2])
+
+print("--- %s seconds ---" % (time.time() - start_time))
+
+print("Using agent", selectedAgent)
+if selectedAgent == "DoNothing":
+    scoreAgent(make_DoNothing_agent, 2021, False)
+elif selectedAgent == "Expert":
+    scoreAgent(make_expert_agent, 2020, True)
+elif selectedAgent == "PARL":
+    scoreAgent(make_PARL_agent, 2020, False)
+elif selectedAgent == "PPO":
+    scoreAgent(make_PPO_agent, 2020, False)
+elif selectedAgent == "Mio":
+    scoreAgent(make_agent, 2021, False)
+else:
+    print("Unknown agent", selectedAgent)
+    exit(0)
+
 print("--- %s seconds ---" % (time.time() - start_time))

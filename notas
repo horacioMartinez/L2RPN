@@ -26,7 +26,8 @@ https://arxiv.org/abs/2005.03675
 https://www.cs.mcgill.ca/~wlh/grl_book/
 
 
-Convertir gif a png: $ convert Scenario_april_000.gif target.png
+Convertir gif a png:
+$ convert Scenario_april_000.gif target.png
 
 Como es que a mi me da de maximo 519 acciones pero PARL dice que lo reduce a 1000 acciones en el paper?
 
@@ -121,3 +122,20 @@ Oponente:
   is triggered.
 - `kwargs_opponent`: additional information for the opponent. In this case we provide for each grid the powerline it
   can attack.
+
+Factorizar action space:
+
+https://openreview.net/pdf?id=naSAkn2Xo46
+
+black box optimization:
+
+https://dl.acm.org/doi/pdf/10.1145/3377930.3389838
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+Idea del problema de que reward al final del episodio seria un problema:
+
+Generar episodios mas chicos a partir de los cuales donde pierde. Hacer que comienze N estados antes de perder y ver que el agente aprenda a resolver esos !.
+
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
