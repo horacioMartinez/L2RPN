@@ -97,25 +97,26 @@ def scoreAgent(make_agent, competition, saveGif):
 # agent = make_DoNothing_agent(env)
 
 if len(sys.argv) < 3:
-    print("Not enough arguments. USAGE: <AgentName> <NumScenarios>")
+    print("Not enough arguments. USAGE: <AgentName> <NumScenarios> <Year>")
     exit()
 
 selectedAgent = str(sys.argv[1])
 number_of_scenarios = int(sys.argv[2])
+year = int(sys.argv[3])
 
 print("--- %s seconds ---" % (time.time() - start_time))
 
 print("Using agent", selectedAgent)
 if selectedAgent == "DoNothing":
-    scoreAgent(make_DoNothing_agent, 2021, False)
+    scoreAgent(make_DoNothing_agent, year, False)
 elif selectedAgent == "Expert":
-    scoreAgent(make_expert_agent, 2020, True)
+    scoreAgent(make_expert_agent, year, True)
 elif selectedAgent == "PARL":
-    scoreAgent(make_PARL_agent, 2020, False)
+    scoreAgent(make_PARL_agent, year, False)
 elif selectedAgent == "PPO":
-    scoreAgent(make_PPO_agent, 2020, False)
+    scoreAgent(make_PPO_agent, year, False)
 elif selectedAgent == "Mio":
-    scoreAgent(make_agent, 2021, False)
+    scoreAgent(make_agent, year, False)
 else:
     print("Unknown agent", selectedAgent)
     exit(0)

@@ -46,8 +46,10 @@ class MyAgent(BaseAgent):
         return True
 
     def array2action(self, array):
+        print(">")
+        print(array[236:413])
         action = self.action_space({"change_bus": array[236:413]})
-        action._change_bus_vect = action._change_bus_vect.astype(bool)
+        # action._change_bus_vect = action._change_bus_vect.astype(bool)
         return action
 
     def __init__(self, env, action_space, name):
@@ -59,10 +61,15 @@ class MyAgent(BaseAgent):
         self.actions62 = np.load(os.path.join(actions_directory_path, "actions62.npy"))
         self.actions146 = np.load(os.path.join(actions_directory_path, "actions146.npy"))
         self.actions = np.concatenate((self.actions62, self.actions146), axis=0)
-        # Creo que son todas de change buffer y usan array2action
+        # Son todas de change buffer y usan array2action
+        # Actions62 + Action146 = 208 acciones
+        # actions1255 son 1255 acciones adicionales que las usa por si no sirven las priemras 208 ?
         self.actions1255 = np.load(os.path.join(actions_directory_path, "actions1255.npy"))
         # self.actions contiene un array de arrays, donde cada uno de ellos es una accion encodeada como array.
         print("||||||||||||||||||||||||||||| >>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        print(len(self.actions))
+        print(len(self.actions1255))
+        exit()
         for action in self.actions:
             grid2OpAction = self.array2action(action)
             print(grid2OpAction)
