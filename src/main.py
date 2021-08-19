@@ -26,10 +26,8 @@ from my_agent import make_agent
 start_time = time.time()
 BACKEND = LightSimBackend
 
-number_of_scenarios = -1
 
-
-def scoreAgent(make_agent, competition, saveGif):
+def scoreAgent(make_agent, competition, number_of_scenarios, saveGif):
     if competition == 2020:
         scoring_function = ScoreL2RPN2020
         track = "l2rpn_neurips_2020_track1_small"
@@ -108,15 +106,15 @@ print("--- %s seconds ---" % (time.time() - start_time))
 
 print("Using agent", selectedAgent)
 if selectedAgent == "DoNothing":
-    scoreAgent(make_DoNothing_agent, year, False)
+    scoreAgent(make_DoNothing_agent, year, number_of_scenarios, False)
 elif selectedAgent == "Expert":
-    scoreAgent(make_expert_agent, year, True)
+    scoreAgent(make_expert_agent, year, number_of_scenarios, True)
 elif selectedAgent == "PARL":
-    scoreAgent(make_PARL_agent, year, False)
+    scoreAgent(make_PARL_agent, year, number_of_scenarios, False)
 elif selectedAgent == "PPO":
-    scoreAgent(make_PPO_agent, year, False)
+    scoreAgent(make_PPO_agent, year, number_of_scenarios, False)
 elif selectedAgent == "Mio":
-    scoreAgent(make_agent, year, False)
+    scoreAgent(make_agent, year, number_of_scenarios, False)
 else:
     print("Unknown agent", selectedAgent)
     exit(0)
