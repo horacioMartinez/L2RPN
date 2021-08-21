@@ -2,7 +2,6 @@ import sys
 import numpy as np
 import time
 import grid2op
-from grid2op.utils import ScoreICAPS2021
 from lightsim2grid.LightSimBackend import LightSimBackend
 
 
@@ -10,8 +9,9 @@ from lightsim2grid.LightSimBackend import LightSimBackend
 start_time = time.time()
 BACKEND = LightSimBackend
 
-scoring_function = ScoreICAPS2021
-track = "l2rpn_icaps_2021_small"
+#track = "l2rpn_icaps_2021_small"
+track = "l2rpn_neurips_2020_track1_small"
+
 env = grid2op.make(track, backend=BACKEND())
 
 actions = []

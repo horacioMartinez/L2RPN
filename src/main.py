@@ -34,7 +34,8 @@ def scoreAgent(make_agent, competition, number_of_scenarios, saveGif):
     else:
         assert competition == 2021
         scoring_function = ScoreICAPS2021
-        track = "l2rpn_icaps_2021_small"
+        # track = "l2rpn_icaps_2021_small"
+        track = "l2rpn_icaps_2021_large"
     env = grid2op.make(track, backend=BACKEND())
     agent = make_agent(env)
     my_score = scoring_function(
@@ -51,6 +52,21 @@ def scoreAgent(make_agent, competition, number_of_scenarios, saveGif):
 
     if competition == 2020:
         print(result)
+        all_scores, time_steps_survived, total_timesteps = result
+        averageTotalScore = 0
+        averageTimestepsSurvived = 0
+        for i in range(0, number_of_scenarios):
+            print("---------")
+            print("Sceneario ", i, ":")
+            print("Total score: ", all_scores[i])
+            averageTotalScore += all_scores[i]
+            print("Time steps survived: ", time_steps_survived[i])
+            averageTimestepsSurvived += time_steps_survived[i]
+            print("Total time steps: ", total_timesteps[i])
+        print("---------")
+        print("Average results>>>>>")
+        print("Average score: ", averageTotalScore / number_of_scenarios)
+        print("Average time steps survived: ", averageTimestepsSurvived / number_of_scenarios)
         return
     else:
         all_scores, time_steps_survived, total_timesteps = result
@@ -71,11 +87,12 @@ def scoreAgent(make_agent, competition, number_of_scenarios, saveGif):
             averageTimestepsSurvived += time_steps_survived[i]
             print("Total time steps: ", total_timesteps[i])
         print("---------")
-        print("Average results>>>>>")
-        print("Average score: ", averageTotalScore / number_of_scenarios)
-        print("Average operational score: ", averageOpScore / number_of_scenarios)
-        print("Average alarm score: ", averageAlarmScore / number_of_scenarios)
-        print("Average time steps survived: ", averageTimestepsSurvived / number_of_scenarios)
+        print("Average results:")
+        print("Number of scenarios:", number_of_scenarios)
+        print("Average score:", averageTotalScore / number_of_scenarios)
+        print("Average operational score:", averageOpScore / number_of_scenarios)
+        print("Average alarm score:", averageAlarmScore / number_of_scenarios)
+        print("Average time steps survived:", averageTimestepsSurvived / number_of_scenarios)
 
     if saveGif:
         for episode_id in range(0, number_of_scenarios):

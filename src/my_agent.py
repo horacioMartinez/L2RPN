@@ -17,10 +17,6 @@ def print_echo(expr):
 
 start_time = time.time()
 
-actions_directory_path = (
-    "/home/horacio/git/competition/L2RPN/src/baseline_agents/L2RPN_NIPS_2020_a_PPO_Solution/submission"
-)
-
 
 class MyAgent(BaseAgent):
     """
@@ -51,35 +47,61 @@ class MyAgent(BaseAgent):
         self.env = env
         self.name = name
 
-        self.actions62 = np.load(os.path.join(".", "bus_actions62.npy"))
-        self.actions146 = np.load(os.path.join(".", "bus_actions146.npy"))
-        self.actions = np.concatenate((self.actions62, self.actions146), axis=0)
-        self.actions1255 = np.load(os.path.join(".", "bus_actions1255.npy"))
-        # Son todas de change buffer y usan array2action
-        # Actions62 + Action146 = 208 acciones
-        # actions1255 son 1255 acciones adicionales que las usa por si no sirven las priemras 208 ?
-        # self.actions contiene un array de arrays, donde cada uno de ellos es una accion encodeada como array.
-        print("||||||||||||||||||||||||||||| >>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-        for action in self.actions:
-            grid2opAction = self.action_space.from_vect(action)
-            print(grid2opAction)
-        print("-----------------------------------------------------------")
-        for action in self.actions1255:
-            grid2opAction = self.action_space.from_vect(action)
-            print(grid2opAction)
-        print("||||||||||||||||||||||||||||| <<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
-        exit()
+        bus_actions62_name = None
+        bus_actions146_name = None
+        bus_actions1255_name = None
+        if "2021" in env.name:
+            bus_actions62_name = "bus_actions62_2021.npy"
+            bus_actions146_name = "bus_actions146_2021.npy"
+            bus_actions1255_name = "bus_actions1255_2021.npy"
+        elif "2020" in env.name:
+            bus_actions62_name = "bus_actions62_2020.npy"
+            bus_actions146_name = "bus_actions146_2020.npy"
+            bus_actions1255_name = "bus_actions1255_2020.npy"
+        else:
+            assert False
+
+        self.bus_actions62 = np.load(os.path.join("./data/", bus_actions62_name))
+        self.bus_actions146 = np.load(os.path.join("./data/", bus_actions146_name))
+        self.bus_actions_62_146 = np.concatenate((self.bus_actions62, self.bus_actions146), axis=0)
+        self.bus_actions1255 = np.load(os.path.join("./data/", bus_actions1255_name))
+        self.bus_actions_62_146_1255 = np.concatenate((self.bus_actions_62_146, self.bus_actions1255), axis=0)
 
     def act(self, observation, reward, done=False):
         global start_time
-        print("--- %s seconds ---" % (time.time() - start_time))
-        numberOfActionsIncludingIllegalOnes = self.action_space.size()
-        print(numberOfActionsIncludingIllegalOnes)
-        # doNothingActionVerifyngLegality = self.action_space({}, True, self.env)
-        random_action = self.action_space.sample()
-        print(random_action)
+        # print("--- %s seconds ---" % (time.time() - start_time))
+
+        if observation.rho.max() < 0.999:
+            no_action = self.action_space({})
+            return no_action
+
+        o, _, d, _ = observation.simulate(self.action_space({}))
+        min_rho = o.rho.max() if not d else 9999
+        print(
+            "%s, heavy load, line-%d load is %.2f"
+            % (str(observation.get_time_stamp()), observation.rho.argmax(), observation.rho.max())
+        )
+
+        # 1-depth search
+        selected_action = self.action_space({})
+        for action_vect in self.bus_actions62:
+            action = self.action_space.from_vect(action_vect)
+            is_legal, reason = self.action_space._is_legal(action, self.env)
+            if not is_legal:
+                # skip it? Checking for legality in search is prob different
+                raise reason
+            obs, _, done, _ = observation.simulate(action)
+            if done:
+                continue
+            if obs.rho.max() < min_rho:
+                min_rho = obs.rho.max()
+                selected_action = action
+
+        print("Selected action: ")
+        print(selected_action)
+
         start_time = time.time()
-        return random_action
+        return selected_action
 
 
 def make_agent(env):
