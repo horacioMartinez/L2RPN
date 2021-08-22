@@ -51,20 +51,22 @@ def scoreAgent(make_agent, competition, number_of_scenarios, saveGif):
     print("ENDING THE EVALUATION")
 
     if competition == 2020:
-        print(result)
         all_scores, time_steps_survived, total_timesteps = result
         averageTotalScore = 0
         averageTimestepsSurvived = 0
+        print("Sceneario:Total score,TS survived/total TS")
+        text = ""
         for i in range(0, number_of_scenarios):
-            print("---------")
-            print("Sceneario ", i, ":")
-            print("Total score: ", all_scores[i])
-            averageTotalScore += all_scores[i]
-            print("Time steps survived: ", time_steps_survived[i])
-            averageTimestepsSurvived += time_steps_survived[i]
-            print("Total time steps: ", total_timesteps[i])
+            text += str(i) + ": ["
+            text += f"{all_scores[i]:.1f}" + ","
+            text += str(time_steps_survived[i]) + "/" + str(total_timesteps[i])
+            text += "]"
+            if i < number_of_scenarios - 1:
+                text += " | "
+        print(text)
         print("---------")
-        print("Average results>>>>>")
+        print("Average results >")
+        print("Number of scenarios:", number_of_scenarios)
         print("Average score: ", averageTotalScore / number_of_scenarios)
         print("Average time steps survived: ", averageTimestepsSurvived / number_of_scenarios)
         return
@@ -74,20 +76,24 @@ def scoreAgent(make_agent, competition, number_of_scenarios, saveGif):
         averageOpScore = 0
         averageAlarmScore = 0
         averageTimestepsSurvived = 0
+        print("Sceneario:Total score,Operational score,Alarm score,TS survived/total TS")
+        text = ""
         for i in range(0, number_of_scenarios):
-            print("---------")
-            print("Sceneario ", i, ":")
-            print("Total score: ", all_scores[i][0])
+            text += str(i) + ": ["
+            text += f"{all_scores[i][0]:.1f}" + ","
+            text += f"{all_scores[i][1]:.1f}" + ","
+            text += f"{all_scores[i][2]:.1f}" + ","
+            text += str(time_steps_survived[i]) + "/" + str(total_timesteps[i])
+            text += "]"
+            if i < number_of_scenarios - 1:
+                text += " | "
             averageTotalScore += all_scores[i][0]
-            print("Operational Score: ", all_scores[i][1])
             averageOpScore += all_scores[i][1]
-            print("Alarm Score: ", all_scores[i][2])
             averageAlarmScore += all_scores[i][2]
-            print("Time steps survived: ", time_steps_survived[i])
             averageTimestepsSurvived += time_steps_survived[i]
-            print("Total time steps: ", total_timesteps[i])
+        print(text)
         print("---------")
-        print("Average results:")
+        print("Average results >")
         print("Number of scenarios:", number_of_scenarios)
         print("Average score:", averageTotalScore / number_of_scenarios)
         print("Average operational score:", averageOpScore / number_of_scenarios)

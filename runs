@@ -1,0 +1,265 @@
+\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+
+$ python3.9 main.py PPO 20 2020  
+---------
+Sceneario  0 :
+Total score:  10.666828150289547
+Time steps survived:  1447
+Total time steps:  8062
+---------
+Sceneario  1 :
+Total score:  73.3695038207018
+Time steps survived:  7437
+Total time steps:  8062
+---------
+Sceneario  2 :
+Total score:  23.65704087147443
+Time steps survived:  3085
+Total time steps:  8062
+---------
+Sceneario  3 :
+Total score:  79.78839752103497
+Time steps survived:  8062
+Total time steps:  8062
+---------
+Sceneario  4 :
+Total score:  26.988461250676124
+Time steps survived:  3079
+Total time steps:  8062
+---------
+Sceneario  5 :
+Total score:  58.93546435261233
+Time steps survived:  6159
+Total time steps:  8062
+---------
+Sceneario  6 :
+Total score:  48.2640523589096
+Time steps survived:  5449
+Total time steps:  8062
+---------
+Sceneario  7 :
+Total score:  79.99315348889428
+Time steps survived:  8062
+Total time steps:  8062
+---------
+Sceneario  8 :
+Total score:  64.39997676946113
+Time steps survived:  6619
+Total time steps:  8062
+---------
+Sceneario  9 :
+Total score:  20.70588127197731
+Time steps survived:  3390
+Total time steps:  8062
+---------
+Sceneario  10 :
+Total score:  23.103797414564546
+Time steps survived:  2966
+Total time steps:  8062
+---------
+Sceneario  11 :
+Total score:  62.47795771934643
+Time steps survived:  6444
+Total time steps:  8062
+---------
+Sceneario  12 :
+Total score:  45.6774015349613
+Time steps survived:  4829
+Total time steps:  8062
+---------
+Sceneario  13 :
+Total score:  6.689787811581766
+Time steps survived:  1663
+Total time steps:  8062
+---------
+Sceneario  14 :
+Total score:  30.18345013398673
+Time steps survived:  3125
+Total time steps:  8062
+---------
+Sceneario  15 :
+Total score:  2.07150619133985
+Time steps survived:  1722
+Total time steps:  8062
+---------
+Sceneario  16 :
+Total score:  42.15588906646671
+Time steps survived:  4556
+Total time steps:  8062
+---------
+Sceneario  17 :
+Total score:  0.19296776105116464
+Time steps survived:  794
+Total time steps:  8062
+---------
+Sceneario  18 :
+Total score:  32.46963310756726
+Time steps survived:  3610
+Total time steps:  8062
+---------
+Sceneario  19 :
+Total score:  64.59330411545497
+Time steps survived:  6550
+Total time steps:  8062
+---------
+Average results>>>>>
+Average score:  39.819222735617615
+Average time steps survived:  4452.4
+--- 875.6112725734711 seconds ---
+
+\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+
+$ python3.9 main.py PPO 20 2021
+
+Sceneario  0 :
+Total score:  85.82701158515383
+Operational Score:  79.7528736930769
+Alarm Score:  100.0
+Time steps survived:  8062
+Total time steps:  8062
+---------
+Sceneario  1 :
+Total score:  -18.17649362021978
+Operational Score:  59.747866256828885
+Alarm Score:  -200.0
+Time steps survived:  6399
+Total time steps:  8062
+---------
+Sceneario  2 :
+Total score:  -14.961982841270625
+Operational Score:  64.34002451247054
+Alarm Score:  -200.0
+Time steps survived:  6618
+Total time steps:  8062
+---------
+Sceneario  3 :
+Total score:  -44.73045586904736
+Operational Score:  21.81363447278948
+Alarm Score:  -200.0
+Time steps survived:  2297
+Total time steps:  8062
+---------
+Sceneario  4 :
+Total score:  -40.99453599235275
+Operational Score:  27.150662868067492
+Alarm Score:  -200.0
+Time steps survived:  3464
+Total time steps:  8062
+---------
+Sceneario  5 :
+Total score:  -10.291658012620488
+Operational Score:  71.01191712482787
+Alarm Score:  -200.0
+Time steps survived:  7273
+Total time steps:  8062
+---------
+Sceneario  6 :
+Total score:  -40.815064555236205
+Operational Score:  27.407050635376855
+Alarm Score:  -200.0
+Time steps survived:  3128
+Total time steps:  8062
+---------
+Sceneario  7 :
+Total score:  -52.27821632651487
+Operational Score:  11.031119533550182
+Alarm Score:  -200.0
+Time steps survived:  1300
+Total time steps:  8062
+---------
+Sceneario  8 :
+Total score:  -15.787724783587691
+Operational Score:  63.1603931663033
+Alarm Score:  -200.0
+Time steps survived:  6621
+Total time steps:  8062
+---------
+Sceneario  9 :
+Total score:  -43.0210540395088
+Operational Score:  24.25563708641601
+Alarm Score:  -200.0
+Time steps survived:  3364
+Total time steps:  8062
+---------
+Sceneario  10 :
+Total score:  -53.61809381163275
+Operational Score:  9.117008840524647
+Alarm Score:  -200.0
+Time steps survived:  3124
+Total time steps:  8062
+---------
+Sceneario  11 :
+Total score:  -15.221175461162353
+Operational Score:  63.969749341196646
+Alarm Score:  -200.0
+Time steps survived:  6574
+Total time steps:  8062
+---------
+Sceneario  12 :
+Total score:  -42.089380108991826
+Operational Score:  25.586599844297396
+Alarm Score:  -200.0
+Time steps survived:  3176
+Total time steps:  8062
+---------
+Sceneario  13 :
+Total score:  -8.251311204450609
+Operational Score:  73.92669827935627
+Alarm Score:  -200.0
+Time steps survived:  7608
+Total time steps:  8062
+---------
+Sceneario  14 :
+Total score:  -6.755918392148956
+Operational Score:  76.0629737255015
+Alarm Score:  -200.0
+Time steps survived:  7698
+Total time steps:  8062
+---------
+Sceneario  15 :
+Total score:  -38.02427463627545
+Operational Score:  31.39389337674936
+Alarm Score:  -200.0
+Time steps survived:  4308
+Total time steps:  8062
+---------
+Sceneario  16 :
+Total score:  -59.62072651017784
+Operational Score:  0.5418192711745178
+Alarm Score:  -200.0
+Time steps survived:  1143
+Total time steps:  8062
+---------
+Sceneario  17 :
+Total score:  -11.318899990921807
+Operational Score:  69.54442858439742
+Alarm Score:  -200.0
+Time steps survived:  7130
+Total time steps:  8062
+---------
+Sceneario  18 :
+Total score:  -41.01480611751535
+Operational Score:  27.121705546406645
+Alarm Score:  -200.0
+Time steps survived:  3307
+Total time steps:  8062
+---------
+Sceneario  19 :
+Total score:  -59.975544075240755
+Operational Score:  0.03493703537034776
+Alarm Score:  -200.0
+Time steps survived:  747
+Total time steps:  8062
+---------
+Average results:
+Number of scenarios: 20
+Average score: -26.55601523818612
+Average operational score: 41.348549659734125
+Average alarm score: -185.0
+Average time steps survived: 4667.05
+--- 1213.4989635944366 seconds ---
+
+\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
