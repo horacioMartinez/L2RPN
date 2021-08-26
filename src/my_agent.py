@@ -75,7 +75,10 @@ class MyAgent(BaseAgent):
             no_action = self.action_space({})
             return no_action
 
-        o, _, d, _ = observation.simulate(self.action_space({}))
+        o, _, d, info_simulate = observation.simulate(self.action_space({}))
+        observation._obs_env._reset_to_orig_state()
+        assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
+
         min_rho = o.rho.max() if not d else 9999
         print(
             "%s, heavy load, line-%d load is %.2f"
@@ -90,7 +93,10 @@ class MyAgent(BaseAgent):
             if not is_legal:
                 # skip it? Checking for legality in search is prob different
                 raise reason
-            obs, _, done, _ = observation.simulate(action)
+            obs, _, done, info_simulate = observation.simulate(action)
+            observation._obs_env._reset_to_orig_state()
+            assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
+
             if done:
                 continue
             if obs.rho.max() < min_rho:

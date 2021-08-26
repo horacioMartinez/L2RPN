@@ -92,7 +92,7 @@ class RLAgent(BaseAgent):
 
         if observation.month in self.redispatch_months:
             action = self._try_combine_with_redispatch(observation, action)
-
+        # print(action)
         return action
 
     def load(self, path):
@@ -373,6 +373,8 @@ class RLAgent(BaseAgent):
             if obs_simulate is not None and not any(np.isnan(obs_simulate.rho)):
                 if not done_simulate:
                     overflow_value = float(np.max(obs_simulate.rho))
+                    # if overflow_value <= 0.98:
+                    #    return legal_action
                     if overflow_value < least_overflow:
                         least_overflow = overflow_value
                         best_action = legal_action

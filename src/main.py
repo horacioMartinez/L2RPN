@@ -47,7 +47,7 @@ def scoreAgent(make_agent, competition, number_of_scenarios, saveGif):
     )
     print("STARTING THE EVALUATION")
     path_save = "/home/horacio/git/competition/L2RPN/src/evaluation-output-data/" + agent.name
-    result = my_score.get(agent, path_save)
+    result = my_score.get(agent, path_save, nb_process=1)
     print("ENDING THE EVALUATION")
 
     if competition == 2020:
@@ -63,6 +63,8 @@ def scoreAgent(make_agent, competition, number_of_scenarios, saveGif):
             text += "]"
             if i < number_of_scenarios - 1:
                 text += " | "
+            averageTotalScore += all_scores[i]
+            averageTimestepsSurvived += time_steps_survived[i]
         print(text)
         print("---------")
         print("Average results >")
