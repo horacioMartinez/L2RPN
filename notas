@@ -160,3 +160,9 @@ ALL_ATTR_OBS = ("year", "month", "day", "hour_of_day", "minute_of_hour",
                 )
 
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+State abstraction: https://github.com/anonicml2019/icml_2019_state_abstraction
+con codigo: https://github.com/anonicml2019/icml_2019_state_abstraction
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

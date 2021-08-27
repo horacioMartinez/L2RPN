@@ -5,6 +5,7 @@ import inspect
 import numpy as np
 import sys
 from grid2op.Agent import BaseAgent
+from buckets import bucket_hash_of_observation
 
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -16,6 +17,8 @@ def print_echo(expr):
 
 
 start_time = time.time()
+global_min_rho = 0
+buckets = {}
 
 
 class MyAgent(BaseAgent):
@@ -25,10 +28,10 @@ class MyAgent(BaseAgent):
     the best solution.
     """
 
-    def is_legal(self, action, obs):
+    def is_legal_bus_action(self, action, obs):
         adict = action.as_dict()
         if "change_bus_vect" not in adict:
-            return True
+            assert False
         substation_to_operate = int(adict["change_bus_vect"]["modif_subs_id"][0])
         if obs.time_before_cooldown_sub[substation_to_operate]:
             return False
@@ -68,6 +71,8 @@ class MyAgent(BaseAgent):
         self.bus_actions_62_146_1255 = np.concatenate((self.bus_actions_62_146, self.bus_actions1255), axis=0)
 
     def act(self, observation, reward, done=False):
+        global buckets
+        global global_min_rho
         global start_time
         # print("--- %s seconds ---" % (time.time() - start_time))
 
@@ -75,24 +80,37 @@ class MyAgent(BaseAgent):
             no_action = self.action_space({})
             return no_action
 
+        bucket_hash = bucket_hash_of_observation(observation)
+        if bucket_hash not in buckets:
+            buckets[bucket_hash] = {"visits": 1}
+            # Action: List containing sorted actions, from best to worst. # NOTE: maybe we should update also according to metric of *how* mucho one action improved, not just if it is the best?
+            buckets[bucket_hash] = {"sorted_actions": []}
+        else:
+            buckets[bucket_hash]["visits"] += 1
+
         o, _, d, info_simulate = observation.simulate(self.action_space({}))
         observation._obs_env._reset_to_orig_state()
         assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
 
         min_rho = o.rho.max() if not d else 9999
+        if min_rho != 9999:
+            print("min_rho:", min_rho)
+            if min_rho > global_min_rho:
+                global_min_rho = min_rho
+            print("global_min_rho:", global_min_rho)
         print(
             "%s, heavy load, line-%d load is %.2f"
             % (str(observation.get_time_stamp()), observation.rho.argmax(), observation.rho.max())
         )
 
-        # 1-depth search
+        # 1-depth simulation search of action with least rho.
         selected_action = self.action_space({})
         for action_vect in self.bus_actions62:
             action = self.action_space.from_vect(action_vect)
-            is_legal, reason = self.action_space._is_legal(action, self.env)
+            is_legal = self.is_legal_bus_action(action, observation)
             if not is_legal:
-                # skip it? Checking for legality in search is prob different
-                raise reason
+                continue
+
             obs, _, done, info_simulate = observation.simulate(action)
             observation._obs_env._reset_to_orig_state()
             assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
@@ -105,6 +123,8 @@ class MyAgent(BaseAgent):
 
         print("Selected action: ")
         print(selected_action)
+
+        print("Buckets:", buckets)
 
         start_time = time.time()
         return selected_action

@@ -39,7 +39,6 @@ class RLAgent(BaseAgent):
         for i in range(unitary_actions_vec.shape[0]):
             action = action_space.from_vect(unitary_actions_vec[i])
             self.unitary_actions.append(action)
-
         redispatch_actions_vec = np.load(os.path.join(trained_models_path, "redispatch_actions.npz"))["actions"]
         self.redispatch_actions = []
         for i in range(redispatch_actions_vec.shape[0]):
