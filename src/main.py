@@ -71,7 +71,6 @@ def scoreAgent(make_agent, competition, number_of_scenarios, saveGif):
         print("Number of scenarios:", number_of_scenarios)
         print("Average score: ", averageTotalScore / number_of_scenarios)
         print("Average time steps survived: ", averageTimestepsSurvived / number_of_scenarios)
-        return
     else:
         all_scores, time_steps_survived, total_timesteps = result
         averageTotalScore = 0
@@ -101,6 +100,9 @@ def scoreAgent(make_agent, competition, number_of_scenarios, saveGif):
         print("Average operational score:", averageOpScore / number_of_scenarios)
         print("Average alarm score:", averageAlarmScore / number_of_scenarios)
         print("Average time steps survived:", averageTimestepsSurvived / number_of_scenarios)
+
+    if hasattr(agent, "end"):
+        agent.end()
 
     if saveGif:
         for episode_id in range(0, number_of_scenarios):

@@ -166,3 +166,7 @@ State abstraction: https://github.com/anonicml2019/icml_2019_state_abstraction
 con codigo: https://github.com/anonicml2019/icml_2019_state_abstraction
 
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+Siendo que no hay overflow (max rho < 1), simulate con accion de no hacer nada me da que perderia en el siguiente movimiento. Sin embargo al ejecutarse no termina y sigue ok !!.
+

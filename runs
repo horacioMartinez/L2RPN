@@ -2,107 +2,6 @@
 \/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
 
 $ python3.9 main.py PPO 20 2020  
----------
-Sceneario  0 :
-Total score:  10.666828150289547
-Time steps survived:  1447
-Total time steps:  8062
----------
-Sceneario  1 :
-Total score:  73.3695038207018
-Time steps survived:  7437
-Total time steps:  8062
----------
-Sceneario  2 :
-Total score:  23.65704087147443
-Time steps survived:  3085
-Total time steps:  8062
----------
-Sceneario  3 :
-Total score:  79.78839752103497
-Time steps survived:  8062
-Total time steps:  8062
----------
-Sceneario  4 :
-Total score:  26.988461250676124
-Time steps survived:  3079
-Total time steps:  8062
----------
-Sceneario  5 :
-Total score:  58.93546435261233
-Time steps survived:  6159
-Total time steps:  8062
----------
-Sceneario  6 :
-Total score:  48.2640523589096
-Time steps survived:  5449
-Total time steps:  8062
----------
-Sceneario  7 :
-Total score:  79.99315348889428
-Time steps survived:  8062
-Total time steps:  8062
----------
-Sceneario  8 :
-Total score:  64.39997676946113
-Time steps survived:  6619
-Total time steps:  8062
----------
-Sceneario  9 :
-Total score:  20.70588127197731
-Time steps survived:  3390
-Total time steps:  8062
----------
-Sceneario  10 :
-Total score:  23.103797414564546
-Time steps survived:  2966
-Total time steps:  8062
----------
-Sceneario  11 :
-Total score:  62.47795771934643
-Time steps survived:  6444
-Total time steps:  8062
----------
-Sceneario  12 :
-Total score:  45.6774015349613
-Time steps survived:  4829
-Total time steps:  8062
----------
-Sceneario  13 :
-Total score:  6.689787811581766
-Time steps survived:  1663
-Total time steps:  8062
----------
-Sceneario  14 :
-Total score:  30.18345013398673
-Time steps survived:  3125
-Total time steps:  8062
----------
-Sceneario  15 :
-Total score:  2.07150619133985
-Time steps survived:  1722
-Total time steps:  8062
----------
-Sceneario  16 :
-Total score:  42.15588906646671
-Time steps survived:  4556
-Total time steps:  8062
----------
-Sceneario  17 :
-Total score:  0.19296776105116464
-Time steps survived:  794
-Total time steps:  8062
----------
-Sceneario  18 :
-Total score:  32.46963310756726
-Time steps survived:  3610
-Total time steps:  8062
----------
-Sceneario  19 :
-Total score:  64.59330411545497
-Time steps survived:  6550
-Total time steps:  8062
----------
 Average results>>>>>
 Average score:  39.819222735617615
 Average time steps survived:  4452.4
@@ -113,146 +12,6 @@ Average time steps survived:  4452.4
 
 $ python3.9 main.py PPO 20 2021
 
-Sceneario  0 :
-Total score:  85.82701158515383
-Operational Score:  79.7528736930769
-Alarm Score:  100.0
-Time steps survived:  8062
-Total time steps:  8062
----------
-Sceneario  1 :
-Total score:  -18.17649362021978
-Operational Score:  59.747866256828885
-Alarm Score:  -200.0
-Time steps survived:  6399
-Total time steps:  8062
----------
-Sceneario  2 :
-Total score:  -14.961982841270625
-Operational Score:  64.34002451247054
-Alarm Score:  -200.0
-Time steps survived:  6618
-Total time steps:  8062
----------
-Sceneario  3 :
-Total score:  -44.73045586904736
-Operational Score:  21.81363447278948
-Alarm Score:  -200.0
-Time steps survived:  2297
-Total time steps:  8062
----------
-Sceneario  4 :
-Total score:  -40.99453599235275
-Operational Score:  27.150662868067492
-Alarm Score:  -200.0
-Time steps survived:  3464
-Total time steps:  8062
----------
-Sceneario  5 :
-Total score:  -10.291658012620488
-Operational Score:  71.01191712482787
-Alarm Score:  -200.0
-Time steps survived:  7273
-Total time steps:  8062
----------
-Sceneario  6 :
-Total score:  -40.815064555236205
-Operational Score:  27.407050635376855
-Alarm Score:  -200.0
-Time steps survived:  3128
-Total time steps:  8062
----------
-Sceneario  7 :
-Total score:  -52.27821632651487
-Operational Score:  11.031119533550182
-Alarm Score:  -200.0
-Time steps survived:  1300
-Total time steps:  8062
----------
-Sceneario  8 :
-Total score:  -15.787724783587691
-Operational Score:  63.1603931663033
-Alarm Score:  -200.0
-Time steps survived:  6621
-Total time steps:  8062
----------
-Sceneario  9 :
-Total score:  -43.0210540395088
-Operational Score:  24.25563708641601
-Alarm Score:  -200.0
-Time steps survived:  3364
-Total time steps:  8062
----------
-Sceneario  10 :
-Total score:  -53.61809381163275
-Operational Score:  9.117008840524647
-Alarm Score:  -200.0
-Time steps survived:  3124
-Total time steps:  8062
----------
-Sceneario  11 :
-Total score:  -15.221175461162353
-Operational Score:  63.969749341196646
-Alarm Score:  -200.0
-Time steps survived:  6574
-Total time steps:  8062
----------
-Sceneario  12 :
-Total score:  -42.089380108991826
-Operational Score:  25.586599844297396
-Alarm Score:  -200.0
-Time steps survived:  3176
-Total time steps:  8062
----------
-Sceneario  13 :
-Total score:  -8.251311204450609
-Operational Score:  73.92669827935627
-Alarm Score:  -200.0
-Time steps survived:  7608
-Total time steps:  8062
----------
-Sceneario  14 :
-Total score:  -6.755918392148956
-Operational Score:  76.0629737255015
-Alarm Score:  -200.0
-Time steps survived:  7698
-Total time steps:  8062
----------
-Sceneario  15 :
-Total score:  -38.02427463627545
-Operational Score:  31.39389337674936
-Alarm Score:  -200.0
-Time steps survived:  4308
-Total time steps:  8062
----------
-Sceneario  16 :
-Total score:  -59.62072651017784
-Operational Score:  0.5418192711745178
-Alarm Score:  -200.0
-Time steps survived:  1143
-Total time steps:  8062
----------
-Sceneario  17 :
-Total score:  -11.318899990921807
-Operational Score:  69.54442858439742
-Alarm Score:  -200.0
-Time steps survived:  7130
-Total time steps:  8062
----------
-Sceneario  18 :
-Total score:  -41.01480611751535
-Operational Score:  27.121705546406645
-Alarm Score:  -200.0
-Time steps survived:  3307
-Total time steps:  8062
----------
-Sceneario  19 :
-Total score:  -59.975544075240755
-Operational Score:  0.03493703537034776
-Alarm Score:  -200.0
-Time steps survived:  747
-Total time steps:  8062
----------
 Average results:
 Number of scenarios: 20
 Average score: -26.55601523818612
@@ -398,3 +157,87 @@ Average time steps survived:  5064.2
 --- 624.821711063385 seconds ---
 
 Da practicamente lo mismo, wtf ?
+
+\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+
+$ python3.9 main.py Mio 20 2021
+
+Usando todas las acciones (incluidas las de redispatch:)
+ENDING THE EVALUATION
+Sceneario:Total score,Operational score,Alarm score,TS survived/total TS
+0: [-49.3,15.2,-200.0,1883/8062] | 1: [-55.4,6.6,-200.0,1653/8062] | 2: [-38.2,31.2,-200.0,3374/8062] | 3: [-28.6,44.8,-200.0,4610/8062] | 4: [-44.2,22.6,-200.0,3065/8062] | 5: [-40.0,28.6,-200.0,3095/8062] | 6: [-40.8,27.4,-200.0,3125/8062] | 7: [-15.1,64.1,-200.0,6565/8062] | 8: [-29.4,43.7,-200.0,4762/8062] | 9: [-43.0,24.3,-200.0,3365/8062] | 10: [-53.9,8.7,-200.0,3091/8062] | 11: [-35.3,35.3,-200.0,3804/8062] | 12: [-42.1,25.6,-200.0,3174/8062] | 13: [-54.0,8.5,-200.0,2292/8062] | 14: [85.9,79.9,100.0,8062/8062] | 15: [-46.6,19.1,-200.0,3288/8062] | 16: [-59.6,0.6,-200.0,1151/8062] | 17: [-43.2,23.9,-200.0,3184/8062] | 18: [-11.3,69.5,-200.0,7131/8062] | 19: [-53.2,9.7,-200.0,1652/8062]
+---------
+Average results >
+Number of scenarios: 20
+Average score: -34.870424052150994
+Average operational score: 29.470822782641438
+Average alarm score: -185.0
+Average time steps survived: 3616.3
+Saved buckets to ./data/buckets.pkl
+--- 2983.1490790843964 seconds ---
+
+\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+
+$ python3.9 main.py PPO 20 2021
+
+ENDING THE EVALUATION
+Sceneario:Total score,Operational score,Alarm score,TS survived/total TS
+0: [-49.3,15.2,-200.0,1883/8062] | 1: [85.8,79.7,100.0,8062/8062] | 2: [-9.4,72.3,-200.0,7367/8062] | 3: [-44.7,21.8,-200.0,2297/8062] | 4: [-44.2,22.6,-200.0,3066/8062] | 5: [-11.0,70.0,-200.0,7165/8062] | 6: [-40.8,27.4,-200.0,3128/8062] | 7: [-15.4,63.8,-200.0,6524/8062] | 8: [-16.6,62.0,-200.0,6518/8062] | 9: [-26.0,48.6,-200.0,5423/8062] | 10: [-53.9,8.7,-200.0,3087/8062] | 11: [-15.2,64.0,-200.0,6575/8062] | 12: [-23.7,51.9,-200.0,5557/8062] | 13: [-54.0,8.5,-200.0,2292/8062] | 14: [86.0,80.0,100.0,8062/8062] | 15: [-46.6,19.1,-200.0,3288/8062] | 16: [-23.6,52.0,-200.0,5649/8062] | 17: [-11.4,69.5,-200.0,7127/8062] | 18: [-30.3,42.4,-200.0,4729/8062] | 19: [-9.0,72.9,-200.0,7443/8062]
+---------
+Average results >
+Number of scenarios: 20
+Average score: -17.668823983984463
+Average operational score: 47.615965737165055
+Average alarm score: -170.0
+Average time steps survived: 5262.1
+--- 922.7178239822388 seconds ---
+
+
+\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+
+Mio sin usar las de curtailment:
+
+$ python3.9 main.py Mio 20 2021
+
+ENDING THE EVALUATION
+Sceneario:Total score,TS survived/total TS
+0: [27.9,3109/8062] | 1: [73.5,7438/8062] | 2: [23.7,3087/8062] | 3: [49.7,5173/8062] | 4: [0.3,538/8062] | 5: [24.6,3013/8062] | 6: [12.7,2525/8062] | 7: [80.0,8062/8062] | 8: [0.2,509/8062] | 9: [14.0,2864/8062] | 10: [55.9,5901/8062] | 11: [15.7,1880/8062] | 12: [45.8,4829/8062] | 13: [6.7,1661/8062] | 14: [30.2,3125/8062] | 15: [2.1,1721/8062] | 16: [42.2,4557/8062] | 17: [9.0,1626/8062] | 18: [27.3,3115/8062] | 19: [64.7,6552/8062]
+---------
+Average results >
+Number of scenarios: 20
+Average score:  30.310056322884925
+Average time steps survived:  3564.25
+Saved buckets to ./data/buckets.pkl
+--- 2151.5009655952454 seconds ---
+
+\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+
+PPO: sin usar el predict de la NN
+
+0: [-50.7,13.3,-200.0,1680/8062] | 1: [-35.3,35.3,-200.0,4252/8062] | 2: [-34.3,36.8,-200.0,3920/8062] | 3: [-44.1,22.7,-200.0,2404/8062] | 4: [-44.0,22.8,-200.0,3081/8062] | 5: [-27.0,47.1,-200.0,4951/8062] | 6: [-40.8,27.4,-200.0,3128/8062] | 7: [-22.3,53.9,-200.0,5580/8062] | 8: [-15.1,64.1,-200.0,6708/8062] | 9: [-26.1,48.4,-200.0,5423/8062] | 10: [-87.4,-39.1,-200.0,1536/8062] | 11: [-41.8,26.0,-200.0,2947/8062] | 12: [-20.0,57.1,-200.0,5996/8062] | 13: [-54.0,8.5,-200.0,2292/8062] | 14: [86.0,80.0,100.0,8062/8062] | 15: [85.9,79.9,100.0,8062/8062] | 16: [-59.3,1.0,-200.0,1191/8062] | 17: [-11.4,69.5,-200.0,7130/8062] | 18: [-11.4,69.4,-200.0,7125/8062] | 19: [-60.0,0.0,-200.0,747/8062]
+---------
+Average results >
+Number of scenarios: 20
+Average score: -25.649570241319026
+Average operational score: 36.21489965525854
+Average alarm score: -170.0
+Average time steps survived: 4310.75
+--- 708.3207342624664 seconds ---
+
+\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+
+PARL 2020 con 50 scenarios (Mejor score)
+
+Sceneario:Total score,TS survived/total TS
+0: [28.0,3107/8062] | 1: [73.6,7436/8062] | 2: [23.7,3084/8062] | 3: [49.7,5176/8062] | 4: [27.1,3072/8062] | 5: [80.0,8062/8062] | 6: [48.3,5439/8062] | 7: [80.0,8062/8062] | 8: [64.9,6625/8062] | 9: [20.7,3384/8062] | 10: [73.7,7480/8062] | 11: [67.1,6837/8062] | 12: [45.9,4830/8062] | 13: [30.3,3692/8062] | 14: [30.2,3126/8062] | 15: [15.2,2812/8062] | 16: [42.2,4557/8062] | 17: [0.2,801/8062] | 18: [69.9,7151/8062] | 19: [64.8,6551/8062] | 20: [69.5,7120/8062] | 21: [50.1,5116/8062] | 22: [73.0,7433/8062] | 23: [67.3,6912/8062] | 24: [41.3,4532/8062] | 25: [76.5,7718/8062] | 26: [23.9,3108/8062] | 27: [80.0,8062/8062] | 28: [22.9,3092/8062] | 29: [80.0,8062/8062] | 30: [57.0,5704/8062] | 31: [79.9,8062/8062] | 32: [32.4,3669/8062] | 33: [49.2,5123/8062] | 34: [79.9,8062/8062] | 35: [25.1,3103/8062] | 36: [67.1,6849/8062] | 37: [45.9,4885/8062] | 38: [67.0,6841/8062] | 39: [80.0,8062/8062] | 40: [45.3,4544/8062] | 41: [80.0,8062/8062] | 42: [80.0,8062/8062] | 43: [30.8,3570/8062] | 44: [48.1,4833/8062] | 45: [55.1,5696/8062] | 46: [67.0,6842/8062] | 47: [62.8,6563/8062] | 48: [80.0,8062/8062] | 49: [23.0,2537/8062]
+---------
+Average results >
+Number of scenarios: 50
+Average score:  53.51180447146089
+Average time steps survived:  5631.4
+--- 1803.2481553554535 seconds ---
