@@ -30,7 +30,6 @@ RHO_THRESHOLD = 1.0
 RHO_THRESHOLD_RESET_REDISPATCH = 1.0
 RHO_THRESHOLD_RECONNECT = 1.0
 
-BATCH_ITERATIONS = 10
 # Q(St,At) <- Q(St,At) + alpha(Rt+1 + gamma*max_a(Q(St+1,a)) - Q(St,At))
 
 
@@ -140,8 +139,10 @@ class Trainer(BaseAgent):
         global buckets
         global global_min_rho
         global start_time
+        global first_env_since_overflow
+        global batch_iteration
 
-        # print("--- %s seconds ---" % (time.time() - start_time))
+        print("--- %s seconds ---" % (time.time() - start_time))
 
         some_line_disconnected = not np.all(observation.topo_vect != -1)
         below_rho_threshold = observation.rho.max() < RHO_THRESHOLD
@@ -149,49 +150,31 @@ class Trainer(BaseAgent):
 
         print("current_time_step:", current_time_step)
         if below_rho_threshold:
-            print("Below threshold, rhos:", observation.rho)
-            if self.start_learning_episode_time_step > 0:
-                self.batch_iterations += 1
-                if self.batch_iterations > BATCH_ITERATIONS:
-                    self.start_learning_episode_time_step = -1
-                    self.batch_iterations = 0
-                    print(
-                        "Finished batch of timestep",
-                        self.start_learning_episode_time_step,
-                        " at  timestep",
-                        current_time_step,
-                    )
-                else:
-                    # Go back to self.start_learning_episode_time_step
-                    newEnv = self.start_of_batch_env.copy()
-                    newObs = self.start_of_batch_obs.copy()
-                    return None, newEnv
+            first_env_since_overflow = None
+            batch_iteration = 0  # Reset batch iterations if we get out of this batch and continue with the episode
+            print("Below threshold, rho:", observation.rho.max())
         else:
-            print("Above threshold, rhos:", observation.rho)
+            print("Above threshold, rho:", observation.rho.max())
+            if first_env_since_overflow == None:
+                first_env_since_overflow = env.copy()
+
         if some_line_disconnected:
             # TODO: Mix reconnect action with other actions ??
             action = self._reconnect_action(observation)
             if action is not None:
-                return action, None
+                return action
 
         if below_rho_threshold:  # No overflow
             if not some_line_disconnected:
                 # TODO: try with ._reset_topology() ? Makes sense that it would be better than not doing it.
                 action = self._reset_redispatch(observation)
                 if action is not None:
-                    return action, None
+                    return action
             _, _, done, _ = observation.simulate(self.do_nothing_action)
             observation._obs_env._reset_to_orig_state()
             # TODO: Should we simulate like PARL and do something else if this would fail? Sometimes done returns true
             # assert not done
-            return self.do_nothing_action, None
-
-        # We start a learning episode if we arent in one already:
-        if self.start_learning_episode_time_step == -1:
-            print("ENV ORIGINAL!!!:")
-            self.start_of_batch_env = env.copy()
-            self.start_of_batch_obs = observation.copy()
-            self.start_learning_episode_time_step = current_time_step
+            return self.do_nothing_action
 
         sorted_actions = np.arange(len(self.all_actions))
         buckets.update_bucket(observation, sorted_actions)
@@ -229,11 +212,8 @@ class Trainer(BaseAgent):
                 min_rho = obs.rho.max()
                 selected_action = action
 
-        # print("Selected action: ")
-        # print(selected_action)
-
         start_time = time.time()
-        return selected_action, None
+        return selected_action
 
     def end(self):
         global buckets
@@ -242,47 +222,39 @@ class Trainer(BaseAgent):
         buckets.save_buckets_to_disk()
 
 
-# hyper-parameters
-ACTION_THRESHOLD = 0.9
+start_time = time.time()
+MAX_BATCH_ITERATIONS = 10
+batch_iteration = 0
+
 number_of_episodes = 1
 NUM_CORE = cpu_count()
 print("CPU counts：%d" % NUM_CORE)
-# Build single-process environment
 track = "l2rpn_icaps_2021_large"
 env = grid2op.make(track, backend=LightSimBackend(), reward_class=RedispReward)
-# env.chronics_handler.shuffle(shuffler=lambda x: x[np.random.choice(len(x), size=len(x), replace=False)])
-# Convert to multi-process environment
-# envs = SingleEnvMultiProcess(env=env, nb_env=NUM_CORE)
-# envs.reset()
+
 agent = Trainer(env, env.action_space)
 print("start training...")
 for i in range(number_of_episodes):
     print("Running episode:", i)
-    env.seed(i + 231)
+    env.seed(i + 10)
     obs = env.reset()
     done = False
     reward = env.reward_range[0]
-    aux = 0
+    first_env_since_overflow = None
+    batch_iteration = 0
     while not done:
-        aux += 1
-        act, newEnv = agent.act(env, obs, reward, done)
+        act = agent.act(env, obs, reward, done)
 
-        # if aux == 100:
-        #     print(".")
-        #     env = env.copy()
-        #     obs = env.get_obs()
-        if newEnv != None:
-            assert act == None
-            env = newEnv
-            obs = newEnv.get_obs()
-            reward = 0
-        else:
-            obs, reward, done, info = env.step(env.action_space({}))
-        # print("------>")
-        # print("env.nb_time_step:", env.nb_time_step)
-        # print("env.get_obs()._obs_env.nb_time_step:", env.get_obs().rho)
-        # print("obs._obs_env.nb_time_step:", obs.rho)
+        timestep = env.nb_time_step
+        obs, reward, done, info = env.step(act)
+
+        if done and timestep < 8061 and batch_iteration < MAX_BATCH_ITERATIONS and first_env_since_overflow != None:
+            batch_iteration += 1
+            env = first_env_since_overflow.copy()
+            obs = env.get_obs()
+            done = False
+            print("Returning to timestep:", env.nb_time_step)
+            print("---")
+
 print("FINISH!!")
 agent.end()
-
-# TODO: If done we should backtrack, right now we don't !!!!.
