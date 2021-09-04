@@ -10,6 +10,7 @@ training process:
 author: chen binbin
 mail: cbb@cbb1996.com
 """
+from threading import current_thread
 from lightsim2grid import LightSimBackend
 import os
 import time
@@ -23,6 +24,14 @@ from grid2op.Agent import BaseAgent
 from buckets import Buckets
 
 buckets = Buckets()
+
+# NOTE: Final agent should have same thresholds !
+RHO_THRESHOLD = 1.0
+RHO_THRESHOLD_RESET_REDISPATCH = 1.0
+RHO_THRESHOLD_RECONNECT = 1.0
+
+BATCH_ITERATIONS = 10
+# Q(St,At) <- Q(St,At) + alpha(Rt+1 + gamma*max_a(Q(St+1,a)) - Q(St,At))
 
 
 class Trainer(BaseAgent):
@@ -52,7 +61,6 @@ class Trainer(BaseAgent):
     def __init__(self, env, action_space):
         BaseAgent.__init__(self, action_space)
         self.action_space = action_space
-        self.env = env
         self.do_nothing_action = action_space({})
 
         bus_actions62_name = None
@@ -79,6 +87,10 @@ class Trainer(BaseAgent):
         self.redispatch_actions = np.load(os.path.join("./data/", redispatch_actions_name))
         self.all_actions = np.concatenate((self.bus_actions_62_146_1255, self.redispatch_actions), axis=0)
 
+        self.start_learning_episode_time_step = -1
+        self.batch_iterations = 0  # Batch goes from time we pass rho threshold to when we pass it.
+        self.start_of_batch_env = None
+
     def _reset_redispatch(self, observation):
         # From rl_agent
         if not np.all(observation.target_dispatch == 0.0):
@@ -104,7 +116,7 @@ class Trainer(BaseAgent):
             assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
 
             if not done_simulate and obs_simulate is not None and not any(np.isnan(obs_simulate.rho)):
-                if np.max(obs_simulate.rho) < 1.0:
+                if np.max(obs_simulate.rho) < RHO_THRESHOLD_RESET_REDISPATCH:
                     return act
 
     def _reconnect_action(self, observation):
@@ -116,37 +128,70 @@ class Trainer(BaseAgent):
                 simulation_obs, _, _, _ = observation.simulate(action)
                 observation._obs_env._reset_to_orig_state()
 
-                if np.max(observation.rho) < 1.0 and np.max(simulation_obs.rho) >= 1.0:
+                if (
+                    np.max(observation.rho) < RHO_THRESHOLD_RECONNECT
+                    and np.max(simulation_obs.rho) >= RHO_THRESHOLD_RECONNECT
+                ):
                     continue
 
                 return action
 
-    def act(self, observation, reward, done=False):
+    def act(self, env, observation, reward, done=False):
         global buckets
         global global_min_rho
         global start_time
+
         # print("--- %s seconds ---" % (time.time() - start_time))
 
         some_line_disconnected = not np.all(observation.topo_vect != -1)
-        below_rho_threshold = observation.rho.max() < 1.0
+        below_rho_threshold = observation.rho.max() < RHO_THRESHOLD
+        current_time_step = env.nb_time_step
 
+        print("current_time_step:", current_time_step)
+        if below_rho_threshold:
+            print("Below threshold, rhos:", observation.rho)
+            if self.start_learning_episode_time_step > 0:
+                self.batch_iterations += 1
+                if self.batch_iterations > BATCH_ITERATIONS:
+                    self.start_learning_episode_time_step = -1
+                    self.batch_iterations = 0
+                    print(
+                        "Finished batch of timestep",
+                        self.start_learning_episode_time_step,
+                        " at  timestep",
+                        current_time_step,
+                    )
+                else:
+                    # Go back to self.start_learning_episode_time_step
+                    newEnv = self.start_of_batch_env.copy()
+                    newObs = self.start_of_batch_obs.copy()
+                    return None, newEnv
+        else:
+            print("Above threshold, rhos:", observation.rho)
         if some_line_disconnected:
             # TODO: Mix reconnect action with other actions ??
             action = self._reconnect_action(observation)
             if action is not None:
-                return action
+                return action, None
 
         if below_rho_threshold:  # No overflow
             if not some_line_disconnected:
                 # TODO: try with ._reset_topology() ? Makes sense that it would be better than not doing it.
                 action = self._reset_redispatch(observation)
                 if action is not None:
-                    return action
+                    return action, None
             _, _, done, _ = observation.simulate(self.do_nothing_action)
             observation._obs_env._reset_to_orig_state()
             # TODO: Should we simulate like PARL and do something else if this would fail? Sometimes done returns true
             # assert not done
-            return self.do_nothing_action
+            return self.do_nothing_action, None
+
+        # We start a learning episode if we arent in one already:
+        if self.start_learning_episode_time_step == -1:
+            print("ENV ORIGINAL!!!:")
+            self.start_of_batch_env = env.copy()
+            self.start_of_batch_obs = observation.copy()
+            self.start_learning_episode_time_step = current_time_step
 
         sorted_actions = np.arange(len(self.all_actions))
         buckets.update_bucket(observation, sorted_actions)
@@ -188,7 +233,7 @@ class Trainer(BaseAgent):
         # print(selected_action)
 
         start_time = time.time()
-        return selected_action
+        return selected_action, None
 
     def end(self):
         global buckets
@@ -197,31 +242,47 @@ class Trainer(BaseAgent):
         buckets.save_buckets_to_disk()
 
 
-if __name__ == "__main__":
-    # hyper-parameters
-    ACTION_THRESHOLD = 0.9
-    number_of_episodes = 10
-    NUM_CORE = cpu_count()
-    print("CPU counts：%d" % NUM_CORE)
+# hyper-parameters
+ACTION_THRESHOLD = 0.9
+number_of_episodes = 1
+NUM_CORE = cpu_count()
+print("CPU counts：%d" % NUM_CORE)
+# Build single-process environment
+track = "l2rpn_icaps_2021_large"
+env = grid2op.make(track, backend=LightSimBackend(), reward_class=RedispReward)
+# env.chronics_handler.shuffle(shuffler=lambda x: x[np.random.choice(len(x), size=len(x), replace=False)])
+# Convert to multi-process environment
+# envs = SingleEnvMultiProcess(env=env, nb_env=NUM_CORE)
+# envs.reset()
+agent = Trainer(env, env.action_space)
+print("start training...")
+for i in range(number_of_episodes):
+    print("Running episode:", i)
+    env.seed(i + 231)
+    obs = env.reset()
+    done = False
+    reward = env.reward_range[0]
+    aux = 0
+    while not done:
+        aux += 1
+        act, newEnv = agent.act(env, obs, reward, done)
 
-    # Build single-process environment
-    track = "l2rpn_icaps_2021_large"
-    env = grid2op.make(track, backend=LightSimBackend(), reward_class=RedispReward)
+        # if aux == 100:
+        #     print(".")
+        #     env = env.copy()
+        #     obs = env.get_obs()
+        if newEnv != None:
+            assert act == None
+            env = newEnv
+            obs = newEnv.get_obs()
+            reward = 0
+        else:
+            obs, reward, done, info = env.step(env.action_space({}))
+        # print("------>")
+        # print("env.nb_time_step:", env.nb_time_step)
+        # print("env.get_obs()._obs_env.nb_time_step:", env.get_obs().rho)
+        # print("obs._obs_env.nb_time_step:", obs.rho)
+print("FINISH!!")
+agent.end()
 
-    # env.chronics_handler.shuffle(shuffler=lambda x: x[np.random.choice(len(x), size=len(x), replace=False)])
-
-    # Convert to multi-process environment
-    # envs = SingleEnvMultiProcess(env=env, nb_env=NUM_CORE)
-    # envs.reset()
-
-    agent = Trainer(env, env.action_space)
-
-    print("start training...")
-    for i in range(number_of_episodes):
-        obs = env.reset()
-        done = False
-        reward = env.reward_range[0]
-        while not done:
-            act = agent.act(obs, reward, done)
-            obs, reward, done, info = env.step(act)
-            print("STEP!")
+# TODO: If done we should backtrack, right now we don't !!!!.
