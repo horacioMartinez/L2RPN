@@ -1,4 +1,5 @@
 import os
+import json
 import datetime
 import time
 import inspect
@@ -28,11 +29,8 @@ save_name = "./data/buckets.pkl"
 
 class Buckets:
     def __init__(self):
-        if os.path.isfile(save_name):
-            self.buckets_ = self.load_buckets_from_disk()
-            print("Loaded buckets from", save_name)
-        else:
-            self.buckets_ = {}
+        self.initialized = False
+        self.num_actions = -1
 
     def save_buckets_to_disk(self):
         with open(save_name, "wb") as f:
@@ -82,10 +80,23 @@ class Buckets:
         hash = "".join(map(str, rho_buckets + bus_buckets))
         return hash
 
-    def update_bucket(self, observation, sorted_actions):
+    def initalize(self, all_actions):
+        self.initialized = True
+        self.num_actions = all_actions
+        if os.path.isfile(save_name):
+            self.buckets_ = self.load_buckets_from_disk()
+            print("Loaded buckets from", save_name)
+            assert np.array_equal(self.buckets_["actions"], all_actions)
+        else:
+            self.buckets_ = {}
+            self.buckets_["actions"] = all_actions
+
+    def initialzie_bucket(self, bucket_hash):
+        self.buckets_[bucket_hash] = {"visits": 0, "action_values": np.zeros(self.num_actions)}
+
+    def update_bucket_action_values(self, observation, action_values):
+        assert self.initialized
         bucket_hash = self.bucket_hash_of_observation(observation)
         if bucket_hash not in self.buckets_:
-            # Action: List containing sorted actions, from best to worst. # NOTE: maybe we should update also according to metric of *how* mucho one action improved, not just if it is the best?
-            self.buckets_[bucket_hash] = {"visits": 1, "sorted_actions": sorted_actions}
-        else:
-            self.buckets_[bucket_hash]["visits"] += 1
+            self.initialzie_bucket(bucket_hash)
+        self.buckets_[bucket_hash]["visits"] += 1

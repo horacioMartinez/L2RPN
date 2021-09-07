@@ -131,6 +131,8 @@ class MyAgent(BaseAgent):
         global start_time
         # print("--- %s seconds ---" % (time.time() - start_time))
 
+        print("Below threshold, rho:", observation.rho.max())
+
         some_line_disconnected = not np.all(observation.topo_vect != -1)
         below_rho_threshold = observation.rho.max() < 1.0
 

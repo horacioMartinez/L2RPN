@@ -1,15 +1,3 @@
-"""
-In this file, a multi-process training for PPO model is designed.
-training process:
-    The environment steps “do nothing” action (except reconnection of lines)
-    until encountering a dangerous scenario, then its observation is sent to
-    the Senior Student to get a “do something” action. After stepping this
-    action, the reward is calculated and fed back to the Senior Student for
-    network updating.
-
-author: chen binbin
-mail: cbb@cbb1996.com
-"""
 from threading import current_thread
 from lightsim2grid import LightSimBackend
 import os
@@ -22,8 +10,6 @@ from grid2op.Reward.BaseReward import BaseReward
 from grid2op.Reward import RedispReward
 from grid2op.Agent import BaseAgent
 from buckets import Buckets
-
-buckets = Buckets()
 
 # NOTE: Final agent should have same thresholds !
 RHO_THRESHOLD = 1.0
@@ -78,17 +64,18 @@ class Trainer(BaseAgent):
         else:
             assert False
 
+        self.do_nothing_action_vect = np.array([self.do_nothing_action.to_vect()])
         self.bus_actions62 = np.load(os.path.join("./data/", bus_actions62_name))
         self.bus_actions146 = np.load(os.path.join("./data/", bus_actions146_name))
         self.bus_actions_62_146 = np.concatenate((self.bus_actions62, self.bus_actions146), axis=0)
         self.bus_actions1255 = np.load(os.path.join("./data/", bus_actions1255_name))
         self.bus_actions_62_146_1255 = np.concatenate((self.bus_actions_62_146, self.bus_actions1255), axis=0)
         self.redispatch_actions = np.load(os.path.join("./data/", redispatch_actions_name))
-        self.all_actions = np.concatenate((self.bus_actions_62_146_1255, self.redispatch_actions), axis=0)
-
-        self.start_learning_episode_time_step = -1
-        self.batch_iterations = 0  # Batch goes from time we pass rho threshold to when we pass it.
-        self.start_of_batch_env = None
+        self.all_actions = np.concatenate(
+            (self.do_nothing_action_vect, self.bus_actions_62_146_1255, self.redispatch_actions), axis=0
+        )
+        self.buckets = Buckets()
+        self.buckets.initalize(self.all_actions)
 
     def _reset_redispatch(self, observation):
         # From rl_agent
@@ -118,6 +105,83 @@ class Trainer(BaseAgent):
                 if np.max(obs_simulate.rho) < RHO_THRESHOLD_RESET_REDISPATCH:
                     return act
 
+    def _reset_topology(self, observation):
+        if np.max(observation.rho) < 0.95:
+            offset = 0
+            for sub_id, sub_elem_num in enumerate(observation.sub_info):
+                sub_topo = self.sub_topo_dict[sub_id]
+
+                if sub_id == 28:
+                    sub28_topo = np.array([2, 1, 2, 1, 1])
+                    if (
+                        not np.all(sub_topo.astype(int) == sub28_topo.astype(int))
+                        and observation.time_before_cooldown_sub[sub_id] == 0
+                    ):
+                        sub_id = 28
+                        act = self.action_space({"set_bus": {"substations_id": [(sub_id, sub28_topo)]}})
+
+                        (
+                            obs_simulate,
+                            reward_simulate,
+                            done_simulate,
+                            info_simulate,
+                        ) = observation.simulate(act)
+                        observation._obs_env._reset_to_orig_state()
+                        assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
+                        if not done_simulate and obs_simulate is not None and not any(np.isnan(obs_simulate.rho)):
+                            if np.max(obs_simulate.rho) < 0.95:
+                                return act
+                    continue
+
+                if np.any(sub_topo == 2) and observation.time_before_cooldown_sub[sub_id] == 0:
+                    sub_topo = np.where(sub_topo == 2, 1, sub_topo)  # bus 2 to bus 1
+                    sub_topo = np.where(sub_topo == -1, 0, sub_topo)  # don't do action in bus=-1
+                    reconfig_sub = self.action_space({"set_bus": {"substations_id": [(sub_id, sub_topo)]}})
+
+                    (
+                        obs_simulate,
+                        reward_simulate,
+                        done_simulate,
+                        info_simulate,
+                    ) = observation.simulate(reconfig_sub)
+                    observation._obs_env._reset_to_orig_state()
+
+                    assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
+
+                    if not done_simulate:
+                        assert np.any(obs_simulate.topo_vect != observation.topo_vect)  # have some impact
+
+                    if not done_simulate and obs_simulate is not None and not any(np.isnan(obs_simulate.rho)):
+                        if np.max(obs_simulate.rho) < 0.95:
+                            return reconfig_sub
+
+        if np.max(observation.rho) >= 1.0:
+            sub_id = 28
+            sub_topo = self.sub_topo_dict[sub_id]
+            if np.any(sub_topo == 2) and observation.time_before_cooldown_sub[sub_id] == 0:
+                sub28_topo = np.array([1, 1, 1, 1, 1])
+                act = self.action_space({"set_bus": {"substations_id": [(sub_id, sub28_topo)]}})
+
+                (
+                    obs_simulate,
+                    reward_simulate,
+                    done_simulate,
+                    info_simulate,
+                ) = observation.simulate(act)
+                observation._obs_env._reset_to_orig_state()
+                assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
+                if not done_simulate and obs_simulate is not None and not any(np.isnan(obs_simulate.rho)):
+                    if np.max(obs_simulate.rho) < 0.99:
+                        return act
+
+    def _calc_sub_topo_dict(self, observation):
+        offset = 0
+        self.sub_topo_dict = {}
+        for sub_id, sub_elem_num in enumerate(observation.sub_info):
+            sub_topo = observation.topo_vect[offset : offset + sub_elem_num]
+            offset += sub_elem_num
+            self.sub_topo_dict[sub_id] = sub_topo
+
     def _reconnect_action(self, observation):
         disconnected = np.where(observation.line_status == False)[0].tolist()
 
@@ -135,26 +199,19 @@ class Trainer(BaseAgent):
 
                 return action
 
-    def act(self, env, observation, reward, done=False):
-        global buckets
-        global global_min_rho
+    def act(self, env, observation, reward, training, below_rho_threshold, done=False):
         global start_time
         global first_env_since_overflow
-        global batch_iteration
 
         print("--- %s seconds ---" % (time.time() - start_time))
-
+        self._calc_sub_topo_dict(observation)
         some_line_disconnected = not np.all(observation.topo_vect != -1)
-        below_rho_threshold = observation.rho.max() < RHO_THRESHOLD
+
         current_time_step = env.nb_time_step
 
-        print("current_time_step:", current_time_step)
         if below_rho_threshold:
             first_env_since_overflow = None
-            batch_iteration = 0  # Reset batch iterations if we get out of this batch and continue with the episode
-            print("Below threshold, rho:", observation.rho.max())
         else:
-            print("Above threshold, rho:", observation.rho.max())
             if first_env_since_overflow == None:
                 first_env_since_overflow = env.copy()
 
@@ -166,9 +223,13 @@ class Trainer(BaseAgent):
 
         if below_rho_threshold:  # No overflow
             if not some_line_disconnected:
-                # TODO: try with ._reset_topology() ? Makes sense that it would be better than not doing it.
                 action = self._reset_redispatch(observation)
                 if action is not None:
+                    print("RESET REDISPATCH !")
+                    return action
+                action = self._reset_topology(observation)
+                if action is not None:
+                    print("RESET TOPOLOGY !")
                     return action
             _, _, done, _ = observation.simulate(self.do_nothing_action)
             observation._obs_env._reset_to_orig_state()
@@ -176,8 +237,7 @@ class Trainer(BaseAgent):
             # assert not done
             return self.do_nothing_action
 
-        sorted_actions = np.arange(len(self.all_actions))
-        buckets.update_bucket(observation, sorted_actions)
+        # buckets.update_bucket(observation, sorted_actions)
 
         o, _, d, info_simulate = observation.simulate(self.do_nothing_action)
         observation._obs_env._reset_to_orig_state()
@@ -216,45 +276,77 @@ class Trainer(BaseAgent):
         return selected_action
 
     def end(self):
-        global buckets
-        # print("BUCKETS -----------------_> ")
-        # print(buckets.buckets_)
-        buckets.save_buckets_to_disk()
+        self.buckets.save_buckets_to_disk()
 
 
+def run_training_batch(agent, starting_env):
+    batch_iteration = 0
+    while batch_iteration < MAX_BATCH_ITERATIONS:
+        batch_iteration += 1
+        env_batch = starting_env.copy()
+        obs = env_batch.get_obs()
+        reward = env_batch.reward_range[0]
+        done = False
+        while True:
+            if done:
+                if timestep < 8061:
+                    print("We lost!")
+                else:
+                    print("We won!")
+                break
+            below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
+            if below_rho_threshold:
+                # Update reward with OK
+                break
+            act = agent.act(env_batch, obs, reward, True, below_rho_threshold, done)
+            timestep = env_batch.nb_time_step
+            obs, reward, done, info = env_batch.step(act)
+
+
+TRAIN = True
 start_time = time.time()
 MAX_BATCH_ITERATIONS = 10
-batch_iteration = 0
-
 number_of_episodes = 1
 NUM_CORE = cpu_count()
 print("CPU counts：%d" % NUM_CORE)
-track = "l2rpn_icaps_2021_large"
-env = grid2op.make(track, backend=LightSimBackend(), reward_class=RedispReward)
 
-agent = Trainer(env, env.action_space)
+env_train = grid2op.make("l2rpn_icaps_2021_large_train", backend=LightSimBackend(), reward_class=RedispReward)
+env_val = grid2op.make("l2rpn_icaps_2021_large_val", backend=LightSimBackend(), reward_class=RedispReward)
+agent = Trainer(env_train, env_train.action_space)
 print("start training...")
 for i in range(number_of_episodes):
     print("Running episode:", i)
-    env.seed(i + 10)
-    obs = env.reset()
+    print(env_train.chronics_handler.get_name())
+    env_seed = i
+    agent_seed = i
+    env_train.seed(env_seed)
+    obs = env_train.reset()
     done = False
-    reward = env.reward_range[0]
+    reward = env_train.reward_range[0]
     first_env_since_overflow = None
-    batch_iteration = 0
+    timestep = 0
+    last_train_timestep = 0
     while not done:
-        act = agent.act(env, obs, reward, done)
+        below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
+        act = agent.act(env_train, obs, reward, False, below_rho_threshold, done)
 
-        timestep = env.nb_time_step
-        obs, reward, done, info = env.step(act)
+        timestep = env_train.nb_time_step
+        obs, reward, done, info = env_train.step(act)
+        # TODO: Try reset topology ??? Otherwise we fail as soon as opponent disconnects one line.
+        # print(info)
+        # print(below_rho_threshold)
+        # print(first_env_since_overflow)
+        # print(timestep)
+        # print(info)
+        if TRAIN and done and timestep < 8061 and last_train_timestep < timestep and first_env_since_overflow != None:
+            last_train_timestep = timestep
+            env_train = first_env_since_overflow.copy()
+            obs = env_train.get_obs()
+            print("Running training batch before timestep:", last_train_timestep, "---->")
+            run_training_batch(agent, first_env_since_overflow)
+            print("<----- Done training batch")
 
-        if done and timestep < 8061 and batch_iteration < MAX_BATCH_ITERATIONS and first_env_since_overflow != None:
-            batch_iteration += 1
-            env = first_env_since_overflow.copy()
-            obs = env.get_obs()
-            done = False
-            print("Returning to timestep:", env.nb_time_step)
-            print("---")
+    print("Completed episode", i, ",number of timesteps:", timestep)
 
 print("FINISH!!")
 agent.end()

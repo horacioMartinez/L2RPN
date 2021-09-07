@@ -35,7 +35,7 @@ def scoreAgent(make_agent, competition, number_of_scenarios, saveGif):
         assert competition == 2021
         scoring_function = ScoreICAPS2021
         # track = "l2rpn_icaps_2021_small"
-        track = "l2rpn_icaps_2021_large"
+        track = "l2rpn_icaps_2021_large_val"
     env = grid2op.make(track, backend=BACKEND())
     agent = make_agent(env)
     my_score = scoring_function(
