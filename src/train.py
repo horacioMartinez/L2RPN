@@ -1,3 +1,5 @@
+import random
+from random import randrange
 from threading import current_thread
 from lightsim2grid import LightSimBackend
 import os
@@ -15,8 +17,6 @@ from buckets import Buckets
 RHO_THRESHOLD = 1.0
 RHO_THRESHOLD_RESET_REDISPATCH = 1.0
 RHO_THRESHOLD_RECONNECT = 1.0
-
-# Q(St,At) <- Q(St,At) + alpha(Rt+1 + gamma*max_a(Q(St+1,a)) - Q(St,At))
 
 
 class Trainer(BaseAgent):
@@ -76,6 +76,8 @@ class Trainer(BaseAgent):
         )
         self.buckets = Buckets()
         self.buckets.initalize(self.all_actions)
+        self.previous_bucket_hash = None
+        self.previous_action_index = None
 
     def _reset_redispatch(self, observation):
         # From rl_agent
@@ -199,6 +201,10 @@ class Trainer(BaseAgent):
 
                 return action
 
+    def initialize_for_training_episode(self):
+        self.previous_bucket_hash = None
+        self.previous_action_index = None
+
     def act(self, env, observation, reward, training, below_rho_threshold, done=False):
         global start_time
         global first_env_since_overflow
@@ -249,6 +255,34 @@ class Trainer(BaseAgent):
             % (str(observation.get_time_stamp()), observation.rho.argmax(), observation.rho.max())
         )
 
+        if training:
+            # Pick action randomly (For now)
+            selected_action = None
+            action_valid = False
+            action_index = -1
+            while action_valid == False:
+                action_index = randrange(len(self.all_actions))
+                selected_action = self.action_space.from_vect(self.all_actions[action_index])
+                is_legal = False
+                if np.all(selected_action.redispatch == 0.0):
+                    action_valid = self.is_legal_bus_action(selected_action, observation)
+                else:
+                    action_valid = self.is_legal_redispatch_action(selected_action, observation)
+            bucket_hash = self.buckets.bucket_hash_of_observation(observation)
+
+            if self.previous_bucket_hash != None:
+                assert self.previous_action_index != None
+                print("Train!")
+                self.buckets.update_bucket_action_values_Q_Learning(
+                    self.previous_action_index, self.previous_bucket_hash, bucket_hash, reward
+                )
+
+            self.previous_bucket_hash = bucket_hash
+            self.previous_action_index = action_index
+            return selected_action
+
+        # else
+
         # 1-depth simulation search of action with least rho.
         selected_action = self.action_space({})
         for action_vect in self.bus_actions_62_146:
@@ -287,7 +321,9 @@ def run_training_batch(agent, starting_env):
         obs = env_batch.get_obs()
         reward = env_batch.reward_range[0]
         done = False
+        agent.initialize_for_training_episode()
         while True:
+            episode_data = {"rewards": [], "action_indexes": []}
             if done:
                 if timestep < 8061:
                     print("We lost!")
@@ -302,6 +338,8 @@ def run_training_batch(agent, starting_env):
             timestep = env_batch.nb_time_step
             obs, reward, done, info = env_batch.step(act)
 
+
+random.seed(0)
 
 TRAIN = True
 start_time = time.time()

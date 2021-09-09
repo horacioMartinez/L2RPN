@@ -92,11 +92,23 @@ class Buckets:
             self.buckets_["actions"] = all_actions
 
     def initialzie_bucket(self, bucket_hash):
-        self.buckets_[bucket_hash] = {"visits": 0, "action_values": np.zeros(self.num_actions)}
+        self.buckets_[bucket_hash] = {"visits": 0, "action_values": np.array([0] * self.num_actions)}
 
-    def update_bucket_action_values(self, observation, action_values):
+    def update_bucket_action_values_Q_Learning(self, action_index, bucket_hash, post_bucket_hash, reward):
+        # Q-learning:
+        # Q(St,At) <- Q(St,At) + alpha(Rt+1 + gamma*max_a(Q(St+1,a)) - Q(St,At))
+        ALPHA = 0.1
+        GAMMA = 0.6
+        EPSILON = 0.05
+
         assert self.initialized
-        bucket_hash = self.bucket_hash_of_observation(observation)
         if bucket_hash not in self.buckets_:
             self.initialzie_bucket(bucket_hash)
-        self.buckets_[bucket_hash]["visits"] += 1
+        if post_bucket_hash not in self.buckets_:
+            self.initialzie_bucket(post_bucket_hash)
+        max_post_action_value = np.max(self.buckets_[post_bucket_hash]["action_values"])
+        print("max_post_action_value: ", max_post_action_value)
+        old_action_value = self.buckets_[bucket_hash][action_index]
+        new_action_value = old_action_value + ALPHA * (reward + GAMMA * max_post_action_value - old_action_value)
+        self.buckets_[bucket_hash][action_index] = new_action_value
+        print("new_action_value:", new_action_value)
