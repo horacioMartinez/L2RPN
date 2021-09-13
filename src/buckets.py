@@ -1,4 +1,5 @@
 import os
+from random import randrange, uniform
 import json
 import datetime
 import time
@@ -82,7 +83,7 @@ class Buckets:
 
     def initalize(self, all_actions):
         self.initialized = True
-        self.num_actions = all_actions
+        self.num_actions = len(all_actions)
         if os.path.isfile(save_name):
             self.buckets_ = self.load_buckets_from_disk()
             print("Loaded buckets from", save_name)
@@ -99,16 +100,53 @@ class Buckets:
         # Q(St,At) <- Q(St,At) + alpha(Rt+1 + gamma*max_a(Q(St+1,a)) - Q(St,At))
         ALPHA = 0.1
         GAMMA = 0.6
-        EPSILON = 0.05
 
         assert self.initialized
         if bucket_hash not in self.buckets_:
             self.initialzie_bucket(bucket_hash)
-        if post_bucket_hash not in self.buckets_:
-            self.initialzie_bucket(post_bucket_hash)
-        max_post_action_value = np.max(self.buckets_[post_bucket_hash]["action_values"])
-        print("max_post_action_value: ", max_post_action_value)
-        old_action_value = self.buckets_[bucket_hash][action_index]
+
+        max_post_action_value = 0
+        if post_bucket_hash != None:
+            if post_bucket_hash not in self.buckets_:
+                self.initialzie_bucket(post_bucket_hash)
+            max_post_action_value = np.max(self.buckets_[post_bucket_hash]["action_values"])
+
+        # print("----------")
+        # print(bucket_hash)
+        # with np.printoptions(threshold=np.inf):
+        # print(self.buckets_[bucket_hash]["action_values"])
+        old_action_value = self.buckets_[bucket_hash]["action_values"][action_index]
         new_action_value = old_action_value + ALPHA * (reward + GAMMA * max_post_action_value - old_action_value)
-        self.buckets_[bucket_hash][action_index] = new_action_value
-        print("new_action_value:", new_action_value)
+        self.buckets_[bucket_hash]["action_values"][action_index] = new_action_value
+
+    def select_action_Q_Learning(self, observation, banned_actions_indexes):
+        EPSILON = 0.05
+
+        action_index = -1
+        bucket_hash = self.bucket_hash_of_observation(observation)
+        assert self.initialized
+        if bucket_hash not in self.buckets_:
+            self.initialzie_bucket(bucket_hash)
+
+        while True:
+            if uniform(0, 1) < EPSILON:  # Explore action space
+                action_index = randrange(len(self.buckets_[bucket_hash]["action_values"]))
+            else:
+                action_index = np.argmax(self.buckets_[bucket_hash]["action_values"])  # Exploit learned values
+            if action_index not in banned_actions_indexes:
+                return action_index
+
+    def get_actions_sorted_by_value(self, observation):
+        EPSILON = 0.05
+
+        action_index = -1
+        bucket_hash = self.bucket_hash_of_observation(observation)
+        assert self.initialized
+
+        if bucket_hash not in self.buckets_:
+            return np.array([])
+
+        # Indices of actions sorted by values (Biggest values first)
+        sorted_action_indexes = np.flip(np.argsort(self.buckets_[bucket_hash]["action_values"]))
+
+        return sorted_action_indexes

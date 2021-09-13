@@ -11,6 +11,7 @@ from grid2op.Environment import SingleEnvMultiProcess
 from grid2op.Reward.BaseReward import BaseReward
 from grid2op.Reward import RedispReward
 from grid2op.Agent import BaseAgent
+from scipy.optimize.optimize import bracket
 from buckets import Buckets
 
 # NOTE: Final agent should have same thresholds !
@@ -76,8 +77,6 @@ class Trainer(BaseAgent):
         )
         self.buckets = Buckets()
         self.buckets.initalize(self.all_actions)
-        self.previous_bucket_hash = None
-        self.previous_action_index = None
 
     def _reset_redispatch(self, observation):
         # From rl_agent
@@ -201,15 +200,17 @@ class Trainer(BaseAgent):
 
                 return action
 
-    def initialize_for_training_episode(self):
-        self.previous_bucket_hash = None
-        self.previous_action_index = None
+    def is_legal_action(self, action, observation):
+        if np.all(action.redispatch == 0.0):
+            return self.is_legal_bus_action(action, observation)
+        else:
+            return self.is_legal_redispatch_action(action, observation)
 
     def act(self, env, observation, reward, training, below_rho_threshold, done=False):
         global start_time
         global first_env_since_overflow
 
-        print("--- %s seconds ---" % (time.time() - start_time))
+        # print("--- %s seconds ---" % (time.time() - start_time))
         self._calc_sub_topo_dict(observation)
         some_line_disconnected = not np.all(observation.topo_vect != -1)
 
@@ -225,23 +226,23 @@ class Trainer(BaseAgent):
             # TODO: Mix reconnect action with other actions ??
             action = self._reconnect_action(observation)
             if action is not None:
-                return action
+                return action, -1
 
         if below_rho_threshold:  # No overflow
             if not some_line_disconnected:
                 action = self._reset_redispatch(observation)
                 if action is not None:
                     print("RESET REDISPATCH !")
-                    return action
+                    return action, -1
                 action = self._reset_topology(observation)
                 if action is not None:
                     print("RESET TOPOLOGY !")
-                    return action
+                    return action, -1
             _, _, done, _ = observation.simulate(self.do_nothing_action)
             observation._obs_env._reset_to_orig_state()
             # TODO: Should we simulate like PARL and do something else if this would fail? Sometimes done returns true
             # assert not done
-            return self.do_nothing_action
+            return self.do_nothing_action, -1
 
         # buckets.update_bucket(observation, sorted_actions)
 
@@ -256,42 +257,40 @@ class Trainer(BaseAgent):
         )
 
         if training:
-            # Pick action randomly (For now)
-            selected_action = None
-            action_valid = False
-            action_index = -1
-            while action_valid == False:
-                action_index = randrange(len(self.all_actions))
+            banned_actions_indexes = []
+            while True:
+                action_index = self.buckets.select_action_Q_Learning(observation, banned_actions_indexes)
                 selected_action = self.action_space.from_vect(self.all_actions[action_index])
-                is_legal = False
-                if np.all(selected_action.redispatch == 0.0):
-                    action_valid = self.is_legal_bus_action(selected_action, observation)
-                else:
-                    action_valid = self.is_legal_redispatch_action(selected_action, observation)
-            bucket_hash = self.buckets.bucket_hash_of_observation(observation)
-
-            if self.previous_bucket_hash != None:
-                assert self.previous_action_index != None
-                print("Train!")
-                self.buckets.update_bucket_action_values_Q_Learning(
-                    self.previous_action_index, self.previous_bucket_hash, bucket_hash, reward
-                )
-
-            self.previous_bucket_hash = bucket_hash
-            self.previous_action_index = action_index
-            return selected_action
-
+                if action_index == 0:
+                    # Do nothing action
+                    assert np.array_equal(self.all_actions[action_index], self.do_nothing_action.to_vect())
+                    return selected_action, action_index
+                is_legal = self.is_legal_action(selected_action, observation)
+                if is_legal:
+                    return selected_action, action_index
+                banned_actions_indexes.append(action_index)
         # else
+        # Pick greedy action if possible:
+        sorted_actions_indexes = self.buckets.get_actions_sorted_by_value(observation)
+        if sorted_actions_indexes.size > 0:
+            index = 0
+            while index < len(sorted_actions_indexes):
+                action_index = sorted_actions_indexes[index]
+                selected_action = self.action_space.from_vect(self.all_actions[action_index])
+                if action_index == 0:
+                    # Do nothing action
+                    assert np.array_equal(self.all_actions[action_index], self.do_nothing_action.to_vect())
+                    return selected_action, action_index
+                is_legal = self.is_legal_action(selected_action, observation)
+                if is_legal:
+                    return selected_action, action_index
+                index += 1
 
         # 1-depth simulation search of action with least rho.
         selected_action = self.action_space({})
         for action_vect in self.bus_actions_62_146:
             action = self.action_space.from_vect(action_vect)
-            is_legal = False
-            if np.all(action.redispatch == 0.0):
-                is_legal = self.is_legal_bus_action(action, observation)
-            else:
-                is_legal = self.is_legal_redispatch_action(action, observation)
+            is_legal = self.is_legal_action(action, observation)
 
             if not is_legal:
                 continue
@@ -307,7 +306,16 @@ class Trainer(BaseAgent):
                 selected_action = action
 
         start_time = time.time()
-        return selected_action
+        return selected_action, -1
+
+    def update_training(self, previous_obs, new_obs, done, action_index, reward):
+        previous_bucket_hash = self.buckets.bucket_hash_of_observation(previous_obs)
+        if done:
+            bucket_hash = None
+        else:
+            bucket_hash = self.buckets.bucket_hash_of_observation(new_obs)
+
+        self.buckets.update_bucket_action_values_Q_Learning(action_index, previous_bucket_hash, bucket_hash, reward)
 
     def end(self):
         self.buckets.save_buckets_to_disk()
@@ -319,24 +327,40 @@ def run_training_batch(agent, starting_env):
         batch_iteration += 1
         env_batch = starting_env.copy()
         obs = env_batch.get_obs()
-        reward = env_batch.reward_range[0]
+        below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
+        reward = 0
         done = False
-        agent.initialize_for_training_episode()
+        print("Start batch iteration --->")
+        steps = 0
         while True:
-            episode_data = {"rewards": [], "action_indexes": []}
+            action, action_index = agent.act(env_batch, obs, reward, True, below_rho_threshold, done)
+            timestep = env_batch.nb_time_step
+            previous_obs = obs
+            obs, r, done, info = env_batch.step(action)
+            steps += 1
+            below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
+
+            reward = 1
+            should_brake = False
             if done:
                 if timestep < 8061:
                     print("We lost!")
+                    reward = -999999
                 else:
                     print("We won!")
+                    reward = 999999 - steps * 2  # The lower the amount of steps it took to exit, the better
+                should_brake = True
+            elif below_rho_threshold:
+                print("We got below threshold!")
+                reward = 999999
+                should_brake = True
+
+            agent.update_training(previous_obs, obs, done, action_index, reward)
+            if should_brake:
                 break
-            below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
-            if below_rho_threshold:
-                # Update reward with OK
-                break
-            act = agent.act(env_batch, obs, reward, True, below_rho_threshold, done)
-            timestep = env_batch.nb_time_step
-            obs, reward, done, info = env_batch.step(act)
+            assert not should_brake
+
+        print("<--- End batch iteration")
 
 
 random.seed(0)
@@ -354,7 +378,7 @@ agent = Trainer(env_train, env_train.action_space)
 print("start training...")
 for i in range(number_of_episodes):
     print("Running episode:", i)
-    print(env_train.chronics_handler.get_name())
+    # print(env_train.chronics_handler.get_name())
     env_seed = i
     agent_seed = i
     env_train.seed(env_seed)
@@ -366,7 +390,7 @@ for i in range(number_of_episodes):
     last_train_timestep = 0
     while not done:
         below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
-        act = agent.act(env_train, obs, reward, False, below_rho_threshold, done)
+        act, action_index = agent.act(env_train, obs, reward, False, below_rho_threshold, done)
 
         timestep = env_train.nb_time_step
         obs, reward, done, info = env_train.step(act)
@@ -376,11 +400,14 @@ for i in range(number_of_episodes):
         # print(first_env_since_overflow)
         # print(timestep)
         # print(info)
+        print("obs.rho.max():", obs.rho.max())
+        print("done:", done)
         if TRAIN and done and timestep < 8061 and last_train_timestep < timestep and first_env_since_overflow != None:
             last_train_timestep = timestep
             env_train = first_env_since_overflow.copy()
             obs = env_train.get_obs()
             print("Running training batch before timestep:", last_train_timestep, "---->")
+            print("Start training batch ------>")
             run_training_batch(agent, first_env_since_overflow)
             print("<----- Done training batch")
 
