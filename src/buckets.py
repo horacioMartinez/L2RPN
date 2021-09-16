@@ -93,7 +93,7 @@ class Buckets:
             self.buckets_["actions"] = all_actions
 
     def initialzie_bucket(self, bucket_hash):
-        self.buckets_[bucket_hash] = {"visits": 0, "action_values": np.array([0] * self.num_actions)}
+        self.buckets_[bucket_hash] = {"visits": 0, "action_values": np.array([0.0] * self.num_actions)}
 
     def update_bucket_action_values_Q_Learning(self, action_index, bucket_hash, post_bucket_hash, reward):
         # Q-learning:
@@ -104,7 +104,6 @@ class Buckets:
         assert self.initialized
         if bucket_hash not in self.buckets_:
             self.initialzie_bucket(bucket_hash)
-
         max_post_action_value = 0
         if post_bucket_hash != None:
             if post_bucket_hash not in self.buckets_:
@@ -113,8 +112,6 @@ class Buckets:
 
         # print("----------")
         # print(bucket_hash)
-        # with np.printoptions(threshold=np.inf):
-        # print(self.buckets_[bucket_hash]["action_values"])
         old_action_value = self.buckets_[bucket_hash]["action_values"][action_index]
         new_action_value = old_action_value + ALPHA * (reward + GAMMA * max_post_action_value - old_action_value)
         self.buckets_[bucket_hash]["action_values"][action_index] = new_action_value
@@ -127,7 +124,9 @@ class Buckets:
         assert self.initialized
         if bucket_hash not in self.buckets_:
             self.initialzie_bucket(bucket_hash)
-
+        # with np.printoptions(threshold=np.inf):
+        # print(self.buckets_[bucket_hash]["action_values"])
+        assert len(banned_actions_indexes) < len(self.buckets_[bucket_hash]["action_values"])
         while True:
             if uniform(0, 1) < EPSILON:  # Explore action space
                 action_index = randrange(len(self.buckets_[bucket_hash]["action_values"]))
@@ -150,3 +149,19 @@ class Buckets:
         sorted_action_indexes = np.flip(np.argsort(self.buckets_[bucket_hash]["action_values"]))
 
         return sorted_action_indexes
+
+
+# TOOOOODOOOOOOOOOOOOOOOOO:
+
+# We need to have Q-values for the 'batch' only. We warm-start this values from the ones already in the buckets.
+
+# Once we finish the batch, we add the correspoding value to the bucket.
+
+# One thing to watch out for, is that non-valid actions will have a value of 0 which in many cases would be greater than all others ?
+
+
+# TODO (OLD):
+# Better algorithm than Q-Learning. Right now actions are chosen according to epsilon if they aren't the one with the biggest value.
+# Chose according to percentage of value ? ^ Is bad because we relay on randoming the correct action out of 1000.
+# Giving only values when we reach a way to survive ??? Is exiting early in the loop good ?
+# Try without dispatchment ?

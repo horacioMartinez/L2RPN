@@ -1,4 +1,5 @@
 import random
+import resource
 from random import randrange
 from threading import current_thread
 from lightsim2grid import LightSimBackend
@@ -72,9 +73,7 @@ class Trainer(BaseAgent):
         self.bus_actions1255 = np.load(os.path.join("./data/", bus_actions1255_name))
         self.bus_actions_62_146_1255 = np.concatenate((self.bus_actions_62_146, self.bus_actions1255), axis=0)
         self.redispatch_actions = np.load(os.path.join("./data/", redispatch_actions_name))
-        self.all_actions = np.concatenate(
-            (self.do_nothing_action_vect, self.bus_actions_62_146_1255, self.redispatch_actions), axis=0
-        )
+        self.all_actions = np.concatenate((self.do_nothing_action_vect, self.bus_actions_62_146_1255), axis=0)
         self.buckets = Buckets()
         self.buckets.initalize(self.all_actions)
 
@@ -324,7 +323,6 @@ class Trainer(BaseAgent):
 def run_training_batch(agent, starting_env):
     batch_iteration = 0
     while batch_iteration < MAX_BATCH_ITERATIONS:
-        batch_iteration += 1
         env_batch = starting_env.copy()
         obs = env_batch.get_obs()
         below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
@@ -338,36 +336,47 @@ def run_training_batch(agent, starting_env):
             previous_obs = obs
             obs, r, done, info = env_batch.step(action)
             steps += 1
-            below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
-
-            reward = 1
+            max_rho = obs.rho.max()
+            below_rho_threshold = max_rho < RHO_THRESHOLD
+            print("max_rho:", max_rho)
+            reward = 3 - max_rho
             should_brake = False
+            should_brake_batch = False
             if done:
+                should_brake = True
                 if timestep < 8061:
                     print("We lost!")
                     reward = -999999
                 else:
                     print("We won!")
-                    reward = 999999 - steps * 2  # The lower the amount of steps it took to exit, the better
-                should_brake = True
+                    reward = 999999
+                    should_brake_batch = True
             elif below_rho_threshold:
                 print("We got below threshold!")
-                reward = 999999
+                reward = 999999  # The lower the amount of steps it took to exit, the better
+                should_brake_batch = True
                 should_brake = True
+            print("selected_action_index:", action_index)
+            if action_index >= 0:
+                agent.update_training(previous_obs, obs, done, action_index, reward)
 
-            agent.update_training(previous_obs, obs, done, action_index, reward)
+            if should_brake_batch:
+                batch_iteration = MAX_BATCH_ITERATIONS
             if should_brake:
                 break
+
             assert not should_brake
 
+        batch_iteration += 1
         print("<--- End batch iteration")
 
 
 random.seed(0)
 
+MAX_MEMORY_GB = 32
 TRAIN = True
 start_time = time.time()
-MAX_BATCH_ITERATIONS = 10
+MAX_BATCH_ITERATIONS = 100000
 number_of_episodes = 1
 NUM_CORE = cpu_count()
 print("CPU counts：%d" % NUM_CORE)
@@ -394,14 +403,12 @@ for i in range(number_of_episodes):
 
         timestep = env_train.nb_time_step
         obs, reward, done, info = env_train.step(act)
-        # TODO: Try reset topology ??? Otherwise we fail as soon as opponent disconnects one line.
         # print(info)
         # print(below_rho_threshold)
         # print(first_env_since_overflow)
         # print(timestep)
         # print(info)
-        print("obs.rho.max():", obs.rho.max())
-        print("done:", done)
+        # print("obs.rho.max():", obs.rho.max())
         if TRAIN and done and timestep < 8061 and last_train_timestep < timestep and first_env_since_overflow != None:
             last_train_timestep = timestep
             env_train = first_env_since_overflow.copy()
@@ -412,6 +419,10 @@ for i in range(number_of_episodes):
             print("<----- Done training batch")
 
     print("Completed episode", i, ",number of timesteps:", timestep)
+    GBmemory = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) / (1024 * 1024)
+    print("Memory used (GB):", GBmemory)
+    if GBmemory > MAX_MEMORY_GB:
+        break
 
 print("FINISH!!")
 agent.end()
