@@ -1,3 +1,4 @@
+from copy import copy
 import os
 from random import randrange, uniform
 import json
@@ -8,6 +9,9 @@ import numpy as np
 import sys
 import pickle
 import os.path
+
+from numpy import ma
+from numpy.core.numeric import NaN
 
 # Create buckets!
 
@@ -25,21 +29,20 @@ TOPOLOGY_VECTOR_LENGTH = 177
 # DO: Load/Save buckets from disk
 
 
-save_name = "./data/buckets.pkl"
-
-
 class Buckets:
-    def __init__(self):
+    def __init__(self, save_name):
         self.initialized = False
         self.num_actions = -1
+        self.save_name = save_name
 
     def save_buckets_to_disk(self):
-        with open(save_name, "wb") as f:
+        print("Saving buckets to file:", self.save_name)
+        with open(self.save_name, "wb") as f:
             pickle.dump(self.buckets_, f, pickle.HIGHEST_PROTOCOL)
-        print("Saved buckets to", save_name)
+        print("Saved buckets to", self.save_name)
 
     def load_buckets_from_disk(self):
-        with open(save_name, "rb") as f:
+        with open(self.save_name, "rb") as f:
             return pickle.load(f)
 
     def generate_rho_buckets_ceilings(self):
@@ -84,60 +87,18 @@ class Buckets:
     def initalize(self, all_actions):
         self.initialized = True
         self.num_actions = len(all_actions)
-        if os.path.isfile(save_name):
+        if os.path.isfile(self.save_name):
             self.buckets_ = self.load_buckets_from_disk()
-            print("Loaded buckets from", save_name)
+            print("Loaded buckets from", self.save_name)
             assert np.array_equal(self.buckets_["actions"], all_actions)
         else:
             self.buckets_ = {}
             self.buckets_["actions"] = all_actions
 
     def initialzie_bucket(self, bucket_hash):
-        self.buckets_[bucket_hash] = {"visits": 0, "action_values": np.array([0.0] * self.num_actions)}
-
-    def update_bucket_action_values_Q_Learning(self, action_index, bucket_hash, post_bucket_hash, reward):
-        # Q-learning:
-        # Q(St,At) <- Q(St,At) + alpha(Rt+1 + gamma*max_a(Q(St+1,a)) - Q(St,At))
-        ALPHA = 0.1
-        GAMMA = 0.6
-
-        assert self.initialized
-        if bucket_hash not in self.buckets_:
-            self.initialzie_bucket(bucket_hash)
-        max_post_action_value = 0
-        if post_bucket_hash != None:
-            if post_bucket_hash not in self.buckets_:
-                self.initialzie_bucket(post_bucket_hash)
-            max_post_action_value = np.max(self.buckets_[post_bucket_hash]["action_values"])
-
-        # print("----------")
-        # print(bucket_hash)
-        old_action_value = self.buckets_[bucket_hash]["action_values"][action_index]
-        new_action_value = old_action_value + ALPHA * (reward + GAMMA * max_post_action_value - old_action_value)
-        self.buckets_[bucket_hash]["action_values"][action_index] = new_action_value
-
-    def select_action_Q_Learning(self, observation, banned_actions_indexes):
-        EPSILON = 0.05
-
-        action_index = -1
-        bucket_hash = self.bucket_hash_of_observation(observation)
-        assert self.initialized
-        if bucket_hash not in self.buckets_:
-            self.initialzie_bucket(bucket_hash)
-        # with np.printoptions(threshold=np.inf):
-        # print(self.buckets_[bucket_hash]["action_values"])
-        assert len(banned_actions_indexes) < len(self.buckets_[bucket_hash]["action_values"])
-        while True:
-            if uniform(0, 1) < EPSILON:  # Explore action space
-                action_index = randrange(len(self.buckets_[bucket_hash]["action_values"]))
-            else:
-                action_index = np.argmax(self.buckets_[bucket_hash]["action_values"])  # Exploit learned values
-            if action_index not in banned_actions_indexes:
-                return action_index
+        self.buckets_[bucket_hash] = {"action_values": np.array([0.0] * self.num_actions)}
 
     def get_actions_sorted_by_value(self, observation):
-        EPSILON = 0.05
-
         action_index = -1
         bucket_hash = self.bucket_hash_of_observation(observation)
         assert self.initialized
@@ -150,18 +111,92 @@ class Buckets:
 
         return sorted_action_indexes
 
+    def initialzie_working_memory_bucket(self, bucket_hash):
+        self.working_memory[bucket_hash] = {"action_values": np.array([0.0] * self.num_actions)}
+        if bucket_hash in self.buckets_:
+            np.copyto(self.working_memory[bucket_hash]["action_values"], self.buckets_[bucket_hash]["action_values"])
 
-# TOOOOODOOOOOOOOOOOOOOOOO:
+    def init_learning_batch(self):
+        self.working_memory = {}
 
-# We need to have Q-values for the 'batch' only. We warm-start this values from the ones already in the buckets.
+    def finalize_learning_batch(self, winner_buckets_hashes, winner_action_indexes):
+        for bucket_hash in self.working_memory:
+            if bucket_hash not in self.buckets_:
+                self.initialzie_bucket(bucket_hash)
+            # Normalize batch values between -1 and 1
+            assert np.isfinite(self.working_memory[bucket_hash]["action_values"]).all()
+            assert np.isfinite(np.abs(self.working_memory[bucket_hash]["action_values"]).all())
 
-# Once we finish the batch, we add the correspoding value to the bucket.
+            max_abs_val = np.max(np.abs(self.working_memory[bucket_hash]["action_values"]), axis=0)
+            if max_abs_val == 0:
+                return
+            self.working_memory[bucket_hash]["action_values"] /= max_abs_val
+            self.buckets_[bucket_hash]["action_values"] += self.working_memory[bucket_hash]["action_values"]
 
-# One thing to watch out for, is that non-valid actions will have a value of 0 which in many cases would be greater than all others ?
+        if len(winner_buckets_hashes) == 0:
+            #######
+            # print("Final bucket hashes -------------> :")
+            # for bucket_hash in self.working_memory:
+            # print(bucket_hash)
+            # with np.printoptions(threshold=np.inf):
+            # print(self.buckets_[bucket_hash]["action_values"])
+            #######
+            return
 
+        assert len(winner_buckets_hashes) == len(winner_action_indexes)
+        for i in range(0, len(winner_buckets_hashes)):
+            self.buckets_[winner_buckets_hashes[i]]["action_values"][winner_action_indexes[i]] += 100
 
-# TODO (OLD):
-# Better algorithm than Q-Learning. Right now actions are chosen according to epsilon if they aren't the one with the biggest value.
-# Chose according to percentage of value ? ^ Is bad because we relay on randoming the correct action out of 1000.
-# Giving only values when we reach a way to survive ??? Is exiting early in the loop good ?
-# Try without dispatchment ?
+        #######
+        # print("Final bucket hashes -------------> :")
+        # for bucket_hash in self.working_memory:
+        # print(bucket_hash)
+        # with np.printoptions(threshold=np.inf):
+        # print(self.buckets_[bucket_hash]["action_values"])
+        #######
+
+    def update_bucket_action_values_Q_Learning(self, action_index, bucket_hash, post_bucket_hash, reward):
+        # Q-learning:
+        # Q(St,At) <- Q(St,At) + alpha(Rt+1 + gamma*max_a(Q(St+1,a)) - Q(St,At))
+        ALPHA = 0.1
+        GAMMA = 0.6
+
+        assert self.initialized
+        if bucket_hash not in self.working_memory:
+            self.initialzie_working_memory_bucket(bucket_hash)
+        max_post_action_value = 0
+        if post_bucket_hash != None:
+            if post_bucket_hash not in self.working_memory:
+                self.initialzie_working_memory_bucket(post_bucket_hash)
+            # Maximum value excluding 0 because actiosn with value 0 may be invalid (Even though thats not necessarilly the case...)
+            masked_array = np.ma.masked_equal(self.working_memory[post_bucket_hash]["action_values"], 0.0, copy=False)
+            max_post_action_value = 0.0
+            if masked_array.count() > 0:
+                max_post_action_value = np.max(masked_array)
+        # print("----------")
+        # print(bucket_hash)
+        old_action_value = self.working_memory[bucket_hash]["action_values"][action_index]
+        new_action_value = old_action_value + ALPHA * (reward + GAMMA * max_post_action_value - old_action_value)
+
+        self.working_memory[bucket_hash]["action_values"][action_index] = new_action_value
+
+        # with np.printoptions(threshold=np.inf):
+        # print(bucket_hash)
+        # print(self.working_memory[bucket_hash]["action_values"])
+
+    def select_action_Q_Learning(self, observation, banned_actions_indexes):
+        EPSILON = 0.05
+
+        action_index = -1
+        bucket_hash = self.bucket_hash_of_observation(observation)
+        assert self.initialized
+        if bucket_hash not in self.working_memory:
+            self.initialzie_working_memory_bucket(bucket_hash)
+        assert len(banned_actions_indexes) < len(self.working_memory[bucket_hash]["action_values"])
+        while True:
+            if uniform(0, 1) < EPSILON:  # Explore action space
+                action_index = randrange(len(self.working_memory[bucket_hash]["action_values"]))
+            else:
+                action_index = np.argmax(self.working_memory[bucket_hash]["action_values"])  # Exploit learned values
+            if action_index not in banned_actions_indexes:
+                return action_index

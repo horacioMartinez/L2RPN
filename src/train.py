@@ -73,8 +73,11 @@ class Trainer(BaseAgent):
         self.bus_actions1255 = np.load(os.path.join("./data/", bus_actions1255_name))
         self.bus_actions_62_146_1255 = np.concatenate((self.bus_actions_62_146, self.bus_actions1255), axis=0)
         self.redispatch_actions = np.load(os.path.join("./data/", redispatch_actions_name))
-        self.all_actions = np.concatenate((self.do_nothing_action_vect, self.bus_actions_62_146_1255), axis=0)
-        self.buckets = Buckets()
+        self.all_actions = np.concatenate((self.do_nothing_action_vect, self.bus_actions62), axis=0)
+
+        buckets_save_file = "./data/buckets-" + str(len(self.all_actions)) + ".pkl"
+        print("buckets_save_file:", buckets_save_file)
+        self.buckets = Buckets(buckets_save_file)
         self.buckets.initalize(self.all_actions)
 
     def _reset_redispatch(self, observation):
@@ -231,11 +234,11 @@ class Trainer(BaseAgent):
             if not some_line_disconnected:
                 action = self._reset_redispatch(observation)
                 if action is not None:
-                    print("RESET REDISPATCH !")
+                    # print("RESET REDISPATCH !")
                     return action, -1
                 action = self._reset_topology(observation)
                 if action is not None:
-                    print("RESET TOPOLOGY !")
+                    # print("RESET TOPOLOGY !")
                     return action, -1
             _, _, done, _ = observation.simulate(self.do_nothing_action)
             observation._obs_env._reset_to_orig_state()
@@ -250,10 +253,10 @@ class Trainer(BaseAgent):
         assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
 
         min_rho = o.rho.max() if not d else 9999
-        print(
-            "%s, heavy load, line-%d load is %.2f"
-            % (str(observation.get_time_stamp()), observation.rho.argmax(), observation.rho.max())
-        )
+        # print(
+        #    "%s, heavy load, line-%d load is %.2f"
+        #    % (str(observation.get_time_stamp()), observation.rho.argmax(), observation.rho.max())
+        # )
 
         if training:
             banned_actions_indexes = []
@@ -287,7 +290,7 @@ class Trainer(BaseAgent):
 
         # 1-depth simulation search of action with least rho.
         selected_action = self.action_space({})
-        for action_vect in self.bus_actions_62_146:
+        for action_vect in self.bus_actions62:
             action = self.action_space.from_vect(action_vect)
             is_legal = self.is_legal_action(action, observation)
 
@@ -316,59 +319,70 @@ class Trainer(BaseAgent):
 
         self.buckets.update_bucket_action_values_Q_Learning(action_index, previous_bucket_hash, bucket_hash, reward)
 
-    def end(self):
-        self.buckets.save_buckets_to_disk()
-
 
 def run_training_batch(agent, starting_env):
     batch_iteration = 0
+    agent.buckets.init_learning_batch()
     while batch_iteration < MAX_BATCH_ITERATIONS:
         env_batch = starting_env.copy()
         obs = env_batch.get_obs()
         below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
+        max_rho = obs.rho.max()
         reward = 0
         done = False
-        print("Start batch iteration --->")
+        # print("Start batch iteration --->")
         steps = 0
+        bucket_hashes = []
+        action_indexes = []
         while True:
             action, action_index = agent.act(env_batch, obs, reward, True, below_rho_threshold, done)
+            action_indexes.append(action_index)
+            bucket_hashes.append(agent.buckets.bucket_hash_of_observation(obs))
+
             timestep = env_batch.nb_time_step
             previous_obs = obs
             obs, r, done, info = env_batch.step(action)
             steps += 1
+            previous_max_rho = max_rho
             max_rho = obs.rho.max()
             below_rho_threshold = max_rho < RHO_THRESHOLD
-            print("max_rho:", max_rho)
-            reward = 3 - max_rho
+            # print("max_rho:", max_rho)
+            # print("selected_action_index:", action_index)
+            reward = previous_max_rho - max_rho
             should_brake = False
             should_brake_batch = False
+            we_win_or_below_threhsold = False
             if done:
-                should_brake = True
                 if timestep < 8061:
-                    print("We lost!")
+                    # print("We lost!")
+                    bucket_hashes = []
+                    action_indexes = []
                     reward = -999999
+                    should_brake = True
                 else:
-                    print("We won!")
+                    # print("We won!")
                     reward = 999999
-                    should_brake_batch = True
+                    we_win_or_below_threhsold = True
+                    should_brake = True
             elif below_rho_threshold:
-                print("We got below threshold!")
+                # print("We got below threshold!")
                 reward = 999999  # The lower the amount of steps it took to exit, the better
-                should_brake_batch = True
+                we_win_or_below_threhsold = True
                 should_brake = True
-            print("selected_action_index:", action_index)
             if action_index >= 0:
                 agent.update_training(previous_obs, obs, done, action_index, reward)
 
-            if should_brake_batch:
+            if we_win_or_below_threhsold:
                 batch_iteration = MAX_BATCH_ITERATIONS
+
             if should_brake:
                 break
 
             assert not should_brake
 
         batch_iteration += 1
-        print("<--- End batch iteration")
+        # print("<--- End batch iteration")
+    agent.buckets.finalize_learning_batch(bucket_hashes, action_indexes)
 
 
 random.seed(0)
@@ -376,9 +390,10 @@ random.seed(0)
 MAX_MEMORY_GB = 32
 TRAIN = True
 start_time = time.time()
-MAX_BATCH_ITERATIONS = 100000
-number_of_episodes = 1
+MAX_BATCH_ITERATIONS = 100
+number_of_episodes = 20
 NUM_CORE = cpu_count()
+SAVE_BUCKET_INTERVAL = 1
 print("CPU counts：%d" % NUM_CORE)
 
 env_train = grid2op.make("l2rpn_icaps_2021_large_train", backend=LightSimBackend(), reward_class=RedispReward)
@@ -413,16 +428,18 @@ for i in range(number_of_episodes):
             last_train_timestep = timestep
             env_train = first_env_since_overflow.copy()
             obs = env_train.get_obs()
-            print("Running training batch before timestep:", last_train_timestep, "---->")
-            print("Start training batch ------>")
+            # print("Running training batch before timestep:", last_train_timestep, "---->")
+            # print("Start training batch ------>")
             run_training_batch(agent, first_env_since_overflow)
-            print("<----- Done training batch")
+            # print("<----- Done training batch")
 
     print("Completed episode", i, ",number of timesteps:", timestep)
     GBmemory = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) / (1024 * 1024)
     print("Memory used (GB):", GBmemory)
     if GBmemory > MAX_MEMORY_GB:
         break
+    if i % SAVE_BUCKET_INTERVAL == 0:
+        agent.buckets.save_buckets_to_disk()
 
+agent.buckets.save_buckets_to_disk()
 print("FINISH!!")
-agent.end()
