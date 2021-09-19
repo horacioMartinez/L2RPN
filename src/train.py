@@ -388,10 +388,10 @@ def run_training_batch(agent, starting_env):
 random.seed(0)
 
 MAX_MEMORY_GB = 32
-TRAIN = True
+TRAIN = False
 start_time = time.time()
-MAX_BATCH_ITERATIONS = 100
-number_of_episodes = 20
+MAX_BATCH_ITERATIONS = 10000
+number_of_episodes = 20000000
 NUM_CORE = cpu_count()
 SAVE_BUCKET_INTERVAL = 1
 print("CPU counts：%d" % NUM_CORE)
@@ -438,7 +438,7 @@ for i in range(number_of_episodes):
     print("Memory used (GB):", GBmemory)
     if GBmemory > MAX_MEMORY_GB:
         break
-    if i % SAVE_BUCKET_INTERVAL == 0:
+    if i % SAVE_BUCKET_INTERVAL == 0 and TRAIN:
         agent.buckets.save_buckets_to_disk()
 
 agent.buckets.save_buckets_to_disk()

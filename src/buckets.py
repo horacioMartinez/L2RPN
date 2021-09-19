@@ -180,9 +180,9 @@ class Buckets:
 
         self.working_memory[bucket_hash]["action_values"][action_index] = new_action_value
 
-        # with np.printoptions(threshold=np.inf):
-        # print(bucket_hash)
-        # print(self.working_memory[bucket_hash]["action_values"])
+    #      with np.printoptions(threshold=np.inf):
+    #           print(bucket_hash)
+    #            print(self.working_memory[bucket_hash]["action_values"])
 
     def select_action_Q_Learning(self, observation, banned_actions_indexes):
         EPSILON = 0.05
