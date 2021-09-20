@@ -310,6 +310,17 @@ class Trainer(BaseAgent):
         start_time = time.time()
         return selected_action, -1
 
+    def get_action_from_index(self, observation, action_index):
+        selected_action = self.action_space.from_vect(self.all_actions[action_index])
+        if action_index == 0:
+            # Do nothing action
+            assert np.array_equal(self.all_actions[action_index], self.do_nothing_action.to_vect())
+            return selected_action
+        is_legal = self.is_legal_action(selected_action, observation)
+        if is_legal:
+            return selected_action
+        return None
+
     def update_training(self, previous_obs, new_obs, done, action_index, reward):
         previous_bucket_hash = self.buckets.bucket_hash_of_observation(previous_obs)
         if done:
@@ -318,6 +329,99 @@ class Trainer(BaseAgent):
             bucket_hash = self.buckets.bucket_hash_of_observation(new_obs)
 
         self.buckets.update_bucket_action_values_Q_Learning(action_index, previous_bucket_hash, bucket_hash, reward)
+
+
+def run_training_batch_full_search(agent, starting_env):
+    agent.buckets.init_learning_batch()
+    list_false = [False] * len(agent.all_actions)
+    visited_step_action_indexes = []
+    action_index_histories = []
+    counter = 0
+    while True:
+        env_batch = starting_env.copy()
+        obs = env_batch.get_obs()
+        below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
+        max_rho = obs.rho.max()
+        done = False
+        # print("Start batch iteration --->")
+        should_brake_batch = False
+        step = 0
+        action_index_history = []
+        bad_brake = False
+        while True:
+            # print("·", obs.rho.max())
+            if len(visited_step_action_indexes) < step + 1:
+                visited_step_action_indexes.append(list_false.copy())
+            timestep = env_batch.nb_time_step
+
+            step_action_indexes = visited_step_action_indexes[step]
+            is_there_next_step = len(visited_step_action_indexes) > step + 1
+            # Check if next steps are all done, if so, set to True our step
+            if is_there_next_step:
+                if all(x for x in visited_step_action_indexes[step + 1]):
+                    visited_step_action_indexes[step + 1] = list_false.copy()
+                    completed_action_index = step_action_indexes.index(False)
+                    step_action_indexes[completed_action_index] = True
+                    # print(visited_step_action_indexes)
+                    # print("Setting to True because child is full!")
+                    bad_brake = True
+                    break
+            try:
+                action_index = step_action_indexes.index(False)
+            except:
+                assert False
+                break
+
+            # Act according to action_index
+
+            action = agent.get_action_from_index(obs, action_index)
+            action_index_history.append(action_index)
+            if action == None:
+                done = True
+                below_rho_threshold = False
+            else:
+                obs, r, done, info = env_batch.step(action)
+                max_rho = obs.rho.max()
+                below_rho_threshold = max_rho < RHO_THRESHOLD
+
+            should_brake = False
+            if done or below_rho_threshold:
+                should_brake = True
+                step_action_indexes[action_index] = True
+
+            step += 1
+
+            we_win_or_below_threhsold = False
+            # print(visited_step_action_indexes)
+            counter += 1
+            if done:
+                if timestep < 8061:
+                    # print("We lost!")
+                    we_win_or_below_threhsold = False
+                else:
+                    # print("We won!")
+                    we_win_or_below_threhsold = True
+            elif below_rho_threshold:
+                # print("We got below threshold!")
+                we_win_or_below_threhsold = True
+
+            if we_win_or_below_threhsold:
+                should_brake_batch = True
+            if should_brake:
+                break
+
+            assert not should_brake
+        # print("<----- End batch iteration")
+        if not bad_brake:
+            action_index_histories.append(action_index_history)
+        # Once all root action indexes have been visited break:
+        if should_brake_batch or all(x for x in visited_step_action_indexes[0]):
+            print("WE WOOOOOOOOOOOOOOOOOOOOOOOON !! ")
+            print("should_brake_batch:", should_brake_batch)
+            break
+    print("Action index histories:")
+    for action_history in action_index_histories:
+        print(action_history)
 
 
 def run_training_batch(agent, starting_env):
@@ -388,10 +492,10 @@ def run_training_batch(agent, starting_env):
 random.seed(0)
 
 MAX_MEMORY_GB = 32
-TRAIN = False
+TRAIN = True
 start_time = time.time()
-MAX_BATCH_ITERATIONS = 10000
-number_of_episodes = 20000000
+MAX_BATCH_ITERATIONS = 1000000
+number_of_episodes = 1
 NUM_CORE = cpu_count()
 SAVE_BUCKET_INTERVAL = 1
 print("CPU counts：%d" % NUM_CORE)
@@ -423,15 +527,16 @@ for i in range(number_of_episodes):
         # print(first_env_since_overflow)
         # print(timestep)
         # print(info)
-        # print("obs.rho.max():", obs.rho.max())
+        print("obs.rho.max():", obs.rho.max())
         if TRAIN and done and timestep < 8061 and last_train_timestep < timestep and first_env_since_overflow != None:
             last_train_timestep = timestep
             env_train = first_env_since_overflow.copy()
             obs = env_train.get_obs()
             # print("Running training batch before timestep:", last_train_timestep, "---->")
-            # print("Start training batch ------>")
+            print("Start training batch ------>")
+            # run_training_batch_full_search(agent, first_env_since_overflow)
             run_training_batch(agent, first_env_since_overflow)
-            # print("<----- Done training batch")
+            print("<----- Done training batch")
 
     print("Completed episode", i, ",number of timesteps:", timestep)
     GBmemory = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) / (1024 * 1024)
