@@ -73,7 +73,7 @@ class Trainer(BaseAgent):
         self.bus_actions1255 = np.load(os.path.join("./data/", bus_actions1255_name))
         self.bus_actions_62_146_1255 = np.concatenate((self.bus_actions_62_146, self.bus_actions1255), axis=0)
         self.redispatch_actions = np.load(os.path.join("./data/", redispatch_actions_name))
-        self.all_actions = np.concatenate((self.do_nothing_action_vect, self.bus_actions62), axis=0)
+        self.all_actions = np.concatenate((self.do_nothing_action_vect, self.bus_actions_62_146_1255), axis=0)
 
         buckets_save_file = "./data/buckets-" + str(len(self.all_actions)) + ".pkl"
         print("buckets_save_file:", buckets_save_file)
@@ -424,6 +424,74 @@ def run_training_batch_full_search(agent, starting_env):
         print(action_history)
 
 
+def find_lowest_rho_action_index(agent, starting_env):
+    actions_rhos = []
+    num_actions = len(agent.all_actions)
+    i = 0
+    highest = 999
+    lowest = -highest
+    while i < len(agent.all_actions):
+        env_batch = starting_env.copy()
+        obs = env_batch.get_obs()
+        obs_TEMP = obs
+        action_index = i
+        action = agent.get_action_from_index(obs, action_index)
+        if action == None:
+            rho = highest * 2
+        else:
+            (
+                obs_simulate,
+                reward_simulate,
+                done_simulate,
+                info_simulate,
+            ) = obs_TEMP.simulate(action)
+            obs_TEMP._obs_env._reset_to_orig_state()
+            assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
+
+            obs, r, done, info = env_batch.step(action)
+            if done:
+                we_lose = len(info["exception"]) > 0
+                if we_lose:
+                    rho = highest
+                else:
+                    rho = lowest
+            else:
+                rho = obs.rho.max()
+            if done_simulate:
+                print("RHO: ", rho, " SIMULATED RHO: ", highest)
+            else:
+                print("RHO: ", rho, " SIMULATED RHO: ", obs_simulate.rho.max())
+
+        actions_rhos.append(rho)
+        i += 1
+    print(actions_rhos)
+    return actions_rhos.index(min(actions_rhos))
+
+
+def run_training_batch_greedy_search(agent, starting_env):
+    env_batch = starting_env.copy()
+    obs = env_batch.get_obs()
+    while True:
+        lowest_rho_action_index = find_lowest_rho_action_index(agent, env_batch)
+        action = agent.get_action_from_index(obs, lowest_rho_action_index)
+        assert action != None
+        obs, r, done, info = env_batch.step(action)
+        below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
+
+        print("lowest_rho_action_index:", lowest_rho_action_index)
+        if done:
+            we_lose = len(info["exception"]) > 0
+            if we_lose:
+                print("WE LOOOOOOOOOOOOOOSE!")
+                break
+            else:
+                print("WE WIIN!")
+                break
+        if below_rho_threshold:
+            print("BELOW THRESHOLD !!!!!!!!!!!!!!!")
+            break
+
+
 def run_training_batch(agent, starting_env):
     batch_iteration = 0
     agent.buckets.init_learning_batch()
@@ -534,8 +602,9 @@ for i in range(number_of_episodes):
             obs = env_train.get_obs()
             # print("Running training batch before timestep:", last_train_timestep, "---->")
             print("Start training batch ------>")
+            run_training_batch_greedy_search(agent, first_env_since_overflow)
             # run_training_batch_full_search(agent, first_env_since_overflow)
-            run_training_batch(agent, first_env_since_overflow)
+            # run_training_batch(agent, first_env_since_overflow)
             print("<----- Done training batch")
 
     print("Completed episode", i, ",number of timesteps:", timestep)
