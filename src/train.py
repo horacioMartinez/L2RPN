@@ -1,6 +1,7 @@
+import sys
 import random
 import resource
-from random import randrange
+from random import randrange, seed
 from threading import current_thread
 from lightsim2grid import LightSimBackend
 import os
@@ -73,7 +74,8 @@ class Trainer(BaseAgent):
         self.bus_actions1255 = np.load(os.path.join("./data/", bus_actions1255_name))
         self.bus_actions_62_146_1255 = np.concatenate((self.bus_actions_62_146, self.bus_actions1255), axis=0)
         self.redispatch_actions = np.load(os.path.join("./data/", redispatch_actions_name))
-        self.all_actions = np.concatenate((self.do_nothing_action_vect, self.bus_actions_62_146_1255), axis=0)
+        self.all_actions = np.concatenate((self.do_nothing_action_vect, self.bus_actions_62_146), axis=0)
+        print("bus_actions_62_146 actions SIN BUCKETS")
 
         buckets_save_file = "./data/buckets-" + str(len(self.all_actions)) + ".pkl"
         print("buckets_save_file:", buckets_save_file)
@@ -203,6 +205,8 @@ class Trainer(BaseAgent):
                 return action
 
     def is_legal_action(self, action, observation):
+        if action == self.do_nothing_action:
+            return True
         if np.all(action.redispatch == 0.0):
             return self.is_legal_bus_action(action, observation)
         else:
@@ -253,10 +257,10 @@ class Trainer(BaseAgent):
         assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
 
         min_rho = o.rho.max() if not d else 9999
-        # print(
-        #    "%s, heavy load, line-%d load is %.2f"
-        #    % (str(observation.get_time_stamp()), observation.rho.argmax(), observation.rho.max())
-        # )
+        print(
+            "%s, heavy load, line-%d load is %.2f"
+            % (str(observation.get_time_stamp()), observation.rho.argmax(), observation.rho.max())
+        )
 
         if training:
             banned_actions_indexes = []
@@ -272,25 +276,26 @@ class Trainer(BaseAgent):
                     return selected_action, action_index
                 banned_actions_indexes.append(action_index)
         # else
-        # Pick greedy action if possible:
-        sorted_actions_indexes = self.buckets.get_actions_sorted_by_value(observation)
-        if sorted_actions_indexes.size > 0:
-            index = 0
-            while index < len(sorted_actions_indexes):
-                action_index = sorted_actions_indexes[index]
-                selected_action = self.action_space.from_vect(self.all_actions[action_index])
-                if action_index == 0:
-                    # Do nothing action
-                    assert np.array_equal(self.all_actions[action_index], self.do_nothing_action.to_vect())
-                    return selected_action, action_index
-                is_legal = self.is_legal_action(selected_action, observation)
-                if is_legal:
-                    return selected_action, action_index
-                index += 1
+        # # Pick greedy action if possible:
+        # sorted_actions_indexes = self.buckets.get_actions_sorted_by_value(observation)
+        # if sorted_actions_indexes.size > 0:
+        #     index = 0
+        #     while index < len(sorted_actions_indexes):
+        #         action_index = sorted_actions_indexes[index]
+        #         selected_action = self.action_space.from_vect(self.all_actions[action_index])
+        #         if action_index == 0:
+        #             # Do nothing action
+        #             assert np.array_equal(self.all_actions[action_index], self.do_nothing_action.to_vect())
+        #             return selected_action, action_index
+        #         is_legal = self.is_legal_action(selected_action, observation)
+        #         if is_legal:
+        #             return selected_action, action_index
+        #         index += 1
 
         # 1-depth simulation search of action with least rho.
         selected_action = self.action_space({})
-        for action_vect in self.bus_actions62:
+        min_rho = 99
+        for action_vect in self.all_actions:
             action = self.action_space.from_vect(action_vect)
             is_legal = self.is_legal_action(action, observation)
 
@@ -557,13 +562,22 @@ def run_training_batch(agent, starting_env):
     agent.buckets.finalize_learning_batch(bucket_hashes, action_indexes)
 
 
+if len(sys.argv) < 3:
+    print("Not enough arguments. USAGE: <Eval/Train/EvalInTraining> <NumScenarios> <chronics_seed>")
+    exit()
+
+assert str(sys.argv[1]) == "Train" or str(sys.argv[1]) == "Eval" or str(sys.argv[1]) == "EvalInTraining"
+TRAIN = str(sys.argv[1]) == "Train"
+EVAL_TRAINING_DATA = str(sys.argv[1]) == "EvalInTraining"
+
+number_of_scenarios = int(sys.argv[2])
+SEED = int(sys.argv[3])
+
 random.seed(0)
 
 MAX_MEMORY_GB = 32
-TRAIN = True
 start_time = time.time()
 MAX_BATCH_ITERATIONS = 1000000
-number_of_episodes = 1
 NUM_CORE = cpu_count()
 SAVE_BUCKET_INTERVAL = 1
 print("CPU counts：%d" % NUM_CORE)
@@ -571,49 +585,108 @@ print("CPU counts：%d" % NUM_CORE)
 env_train = grid2op.make("l2rpn_icaps_2021_large_train", backend=LightSimBackend(), reward_class=RedispReward)
 env_val = grid2op.make("l2rpn_icaps_2021_large_val", backend=LightSimBackend(), reward_class=RedispReward)
 agent = Trainer(env_train, env_train.action_space)
-print("start training...")
-for i in range(number_of_episodes):
-    print("Running episode:", i)
-    # print(env_train.chronics_handler.get_name())
-    env_seed = i
-    agent_seed = i
-    env_train.seed(env_seed)
-    obs = env_train.reset()
-    done = False
-    reward = env_train.reward_range[0]
-    first_env_since_overflow = None
-    timestep = 0
-    last_train_timestep = 0
-    while not done:
-        below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
-        act, action_index = agent.act(env_train, obs, reward, False, below_rho_threshold, done)
 
-        timestep = env_train.nb_time_step
-        obs, reward, done, info = env_train.step(act)
-        # print(info)
-        # print(below_rho_threshold)
-        # print(first_env_since_overflow)
-        # print(timestep)
-        # print(info)
-        print("obs.rho.max():", obs.rho.max())
-        if TRAIN and done and timestep < 8061 and last_train_timestep < timestep and first_env_since_overflow != None:
-            last_train_timestep = timestep
-            env_train = first_env_since_overflow.copy()
-            obs = env_train.get_obs()
-            # print("Running training batch before timestep:", last_train_timestep, "---->")
-            print("Start training batch ------>")
-            run_training_batch_greedy_search(agent, first_env_since_overflow)
-            # run_training_batch_full_search(agent, first_env_since_overflow)
-            # run_training_batch(agent, first_env_since_overflow)
-            print("<----- Done training batch")
+env_val.chronics_handler.seed(SEED)
+env_val.chronics_handler.shuffle()
+env_train.chronics_handler.seed(SEED)
+env_train.chronics_handler.shuffle()
 
-    print("Completed episode", i, ",number of timesteps:", timestep)
+if TRAIN:
+    print("Start evaluating in training data")
+    for i in range(number_of_scenarios):
+        print("Running episode:", i, "(", env_train.chronics_handler.get_name(), ")")
+        env_seed = i + SEED
+        agent_seed = i + SEED
+        env_train.seed(env_seed)
+        obs = env_train.reset()
+        done = False
+        reward = env_train.reward_range[0]
+        first_env_since_overflow = None
+        timestep = 0
+        last_train_timestep = 0
+        while not done:
+            below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
+            act, action_index = agent.act(env_train, obs, reward, True, below_rho_threshold, done)
+
+            timestep = env_train.nb_time_step
+            obs, reward, done, info = env_train.step(act)
+            if done:
+                print(info)
+            # print(below_rho_threshold)
+            # print(first_env_since_overflow)
+            # print(timestep)
+            # print(info)
+            print("obs.rho.max():", obs.rho.max())
+            if done and timestep < 8061 and last_train_timestep < timestep and first_env_since_overflow != None:
+                last_train_timestep = timestep
+                env_train = first_env_since_overflow.copy()
+                obs = env_train.get_obs()
+                # print("Running training batch before timestep:", last_train_timestep, "---->")
+                print("Start training batch ------>")
+                run_training_batch_greedy_search(agent, first_env_since_overflow)
+                # run_training_batch_full_search(agent, first_env_since_overflow)
+                # run_training_batch(agent, first_env_since_overflow)
+                print("<----- Done training batch")
+
+        print("Completed episode", i, ",number of timesteps:", timestep)
+        GBmemory = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) / (1024 * 1024)
+        print("Memory used (GB):", GBmemory)
+        if GBmemory > MAX_MEMORY_GB:
+            break
+        if i % SAVE_BUCKET_INTERVAL == 0 and TRAIN:
+            agent.buckets.save_buckets_to_disk()
+else:
+    episode_names = []
+    survived_timesteps = []
+    if EVAL_TRAINING_DATA:
+        env = env_train
+    else:
+        env = env_val
+    print("Total number of chronics:", len(env.chronics_handler.chronics_used))
+    for i in range(number_of_scenarios):
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Running episode:", i, "(", env.chronics_handler.get_name(), ")")
+        episode_names.append(env.chronics_handler.get_name())
+        env_seed = i + SEED
+        agent_seed = i + SEED
+        env.seed(env_seed)
+        obs = env.reset()
+        done = False
+        timestep = 0
+        reward = 0
+        below_rho_threshold = True
+        while not done:
+            act, action_index = agent.act(env, obs, reward, False, below_rho_threshold, done)
+            if timestep == 5991:
+                act = agent.do_nothing_action
+            print(act)
+            obs, reward, done, info = env.step(act)
+            below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
+            under_attack = info["opponent_attack_line"] is not None and len(info["opponent_attack_line"]) > 0
+            timestep = env.nb_time_step
+            if under_attack or not below_rho_threshold:
+                print(">>>>>>>")
+                print("Timestep:", timestep)
+                print("obs.rho.max():", obs.rho.max())
+                if under_attack:
+                    print("UNDER ATTACK:")
+                    print(info["opponent_attack_line"])
+                print(obs.topo_vect)
+            if done:
+                survived_timesteps.append(timestep)
+                print(info)
+        print("Completed episode", i, ",number of timesteps:", timestep)
+    print("---------------------------")
+    print("Episodes:", episode_names)
+    print("Num timesteps", len(survived_timesteps), " survived timesteps:", survived_timesteps)
+    average = 0
+    for survived_timestep in survived_timesteps:
+        average += survived_timestep
+    average = average / len(survived_timesteps)
+    print("-> Average survived timesteps:", average)
     GBmemory = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) / (1024 * 1024)
     print("Memory used (GB):", GBmemory)
-    if GBmemory > MAX_MEMORY_GB:
-        break
-    if i % SAVE_BUCKET_INTERVAL == 0 and TRAIN:
-        agent.buckets.save_buckets_to_disk()
+    print("Environment used:", "env_train" if env == env_train else "env_val", "Seed used:", SEED)
 
-agent.buckets.save_buckets_to_disk()
+if TRAIN:
+    agent.buckets.save_buckets_to_disk()
 print("FINISH!!")
