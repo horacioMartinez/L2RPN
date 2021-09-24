@@ -170,3 +170,301 @@ con codigo: https://github.com/anonicml2019/icml_2019_state_abstraction
 
 Siendo que no hay overflow (max rho < 1), simulate con accion de no hacer nada me da que perderia en el siguiente movimiento. Sin embargo al ejecutarse no termina y sigue ok !!.
 
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+Pregunta:
+
+Por la unica razon por la que no hacemos simulate en las 1255 acciones es porque no da el tiempo de ejecucion ???
+
+Probar devuelta, porque segun lo que veo, simulate funciona suficientemente bien como para que elegir la opcion segun simulate sea mejor que usando q-learning, etc, para predecir la accion
+con reward la diferencia de rhos...
+
+Probar si realmente el simulate con 62 da mejor que con 1255 como pensaba antes... 
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+Parece que varias de las veces que falla es porque el oponente desconecta una linea y esto causa DivergingPowerFlow.
+
+Podemos hacer que si simulamos el ataque de un oponente tomemos solo acciones que eviten que esto resulte en un DivergingPowerFlow?.
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+1255 actions con redispatch:
+
+$ python3.9 train.py Eval 10 0
+$ python3.9 train.py Eval 10 1
+$ python3.9 train.py Eval 10 2
+
+Completed episode 9 ,number of timesteps: 3123
+Num timesteps 10  survived timesteps: [8062, 305, 2300, 2274, 3093, 411, 239, 546, 5346, 3123]
+Average survived timesteps: 2569.9
+FINISH!!
+
+Completed episode 9 ,number of timesteps: 8062
+Num timesteps 10  survived timesteps: [5987, 1632, 306, 2295, 2276, 123, 235, 8062, 523, 8062]
+Average survived timesteps: 2950.1
+FINISH!!
+
+Completed episode 9 ,number of timesteps: 2820
+Num timesteps 10  survived timesteps: [8062, 10, 5016, 2524, 3737, 296, 8062, 1657, 3098, 2820]
+Average survived timesteps: 3528.2
+FINISH!!
+
+
+1255 actions sin redispatch:
+
+$ python3.9 train.py Eval 10 0
+$ python3.9 train.py Eval 10 1
+$ python3.9 train.py Eval 10 2
+
+Num timesteps 10  survived timesteps: [8062, 305, 2298, 2274, 3093, 409, 193, 546, 5346, 3123]
+Average survived timesteps: 2564.9
+Memory used (GB): 1.4961051940917969
+Environment used: env_val Seed used: 1
+FINISH!!
+
+Num timesteps 10  survived timesteps: [5987, 1632, 306, 2295, 2276, 123, 235, 8062, 523, 8062]
+Average survived timesteps: 2950.1
+Memory used (GB): 1.4903602600097656
+Environment used: env_val Seed used: 0
+FINISH!!
+
+Num timesteps 10  survived timesteps: [8062, 10, 5016, 2526, 3737, 4896, 8062, 1659, 3103, 2820]
+Average survived timesteps: 3989.1
+Memory used (GB): 1.5011672973632812
+Environment used: env_val Seed used: 2
+FINISH!!
+
+62 actions:
+
+$ python3.9 train.py Eval 10 0
+$ python3.9 train.py Eval 10 1
+$ python3.9 train.py Eval 10 2
+
+Num timesteps 10  survived timesteps: [558, 1632, 305, 5998, 2276, 122, 193, 7788, 523, 8062]
+Episodes: ['Scenario_june_254', 'Scenario_august_151', 'Scenario_february_132', 'Scenario_december_024', 'Scenario_june_004', 'Scenario_september_017', 'Scenario_january_183', 'Scenario_november_247', 'Scenario_april_220', 'Scenario_february_149']
+-> Average survived timesteps: 2745.7
+Memory used (GB): 0.6264724731445312
+Environment used: env_val Seed used: 0
+
+Num timesteps 10  survived timesteps: [1650, 305, 9, 2276, 7477, 384, 172, 529, 8062, 3123]
+Episodes: ['Scenario_june_254', 'Scenario_april_004', 'Scenario_january_221', 'Scenario_august_195', 'Scenario_october_111', 'Scenario_july_303', 'Scenario_december_067', 'Scenario_january_242', 'Scenario_october_017', 'Scenario_june_318']
+-> Average survived timesteps: 2398.7
+Memory used (GB): 0.5742263793945312
+Environment used: env_val Seed used: 1
+
+Num timesteps 10  survived timesteps: [6583, 9, 3079, 121, 8062, 255, 8062, 1640, 3058, 1184]
+Episodes: ['Scenario_january_242', 'Scenario_august_151', 'Scenario_february_132', 'Scenario_april_220', 'Scenario_january_221', 'Scenario_august_210', 'Scenario_october_111', 'Scenario_june_004', 'Scenario_march_106', 'Scenario_october_258']
+-> Average survived timesteps: 3205.3
+Memory used (GB): 0.58477783203125
+Environment used: env_val Seed used: 2
+
+62 + 146 actions:
+
+$ python3.9 train.py Eval 10 0
+$ python3.9 train.py Eval 10 1
+$ python3.9 train.py Eval 10 2
+
+Episodes: ['Scenario_june_254', 'Scenario_august_151', 'Scenario_february_132', 'Scenario_december_024', 'Scenario_june_004', 'Scenario_september_017', 'Scenario_january_183', 'Scenario_november_247', 'Scenario_april_220', 'Scenario_february_149']
+Num timesteps 10  survived timesteps: [5992, 1632, 306, 8062, 2276, 123, 406, 8062, 1561, 8062]
+-> Average survived timesteps: 3648.2
+Memory used (GB): 0.6933403015136719
+Environment used: env_val Seed used: 0
+FINISH!!
+
+Completed episode 9 ,number of timesteps: 2818
+Episodes: ['Scenario_january_242', 'Scenario_august_151', 'Scenario_february_132', 'Scenario_april_220', 'Scenario_january_221', 'Scenario_august_210', 'Scenario_october_111', 'Scenario_june_004', 'Scenario_march_106', 'Scenario_october_258']
+Num timesteps 10  survived timesteps: [8062, 10, 5101, 2522, 8062, 4894, 8062, 1662, 738, 2818]
+-> Average survived timesteps: 4193.1
+Memory used (GB): 0.7543716430664062
+Environment used: env_val Seed used: 2
+FINISH!!
+
+Completed episode 9 ,number of timesteps: 3123
+Episodes: ['Scenario_june_254', 'Scenario_april_004', 'Scenario_january_221', 'Scenario_august_195', 'Scenario_october_111', 'Scenario_july_303', 'Scenario_december_067', 'Scenario_january_242', 'Scenario_october_017', 'Scenario_june_318']
+Num timesteps 10  survived timesteps: [1646, 305, 2300, 2282, 7478, 385, 189, 580, 8062, 3123]
+-> Average survived timesteps: 2635.0
+Memory used (GB): 0.6797065734863281
+Environment used: env_val Seed used: 1
+FINISH!!
+
+
+>>>>>>>>>>>>>>>>>>>
+
+
+Con buckets (1255 acciones):
+
+$ python3.9 train.py Eval 30 0 & python3.9 train.py Eval 30 1 & python3.9 train.py Eval 30 2 & python3.9 train.py Eval 30 3
+
+Episodes: ['Scenario_june_254', 'Scenario_august_151', 'Scenario_february_132', 'Scenario_december_024', 'Scenario_june_004', 'Scenario_september_017', 'Scenario_january_183', 'Scenario_november_247', 'Scenario_april_220', 'Scenario_february_149', 'Scenario_july_303', 'Scenario_june_318', 'Scenario_august_167', 'Scenario_january_221', 'Scenario_april_113', 'Scenario_august_195', 'Scenario_march_059', 'Scenario_may_137', 'Scenario_january_242', 'Scenario_october_258', 'Scenario_august_210', 'Scenario_december_067', 'Scenario_march_106', 'Scenario_october_111', 'Scenario_october_017', 'Scenario_april_004', 'Scenario_june_243', 'Scenario_april_262', 'Scenario_january_132', 'Scenario_june_254']
+Num timesteps 30  survived timesteps: [5987, 1632, 306, 2295, 2276, 123, 235, 8062, 523, 8062, 8062, 2415, 2252, 8062, 494, 1978, 8062, 2381, 2880, 8062, 1130, 2015, 4301, 572, 8062, 6211, 8062, 113, 8062, 8062]
+-> Average survived timesteps: 4024.633333333333
+Memory used (GB): 1.5031623840332031
+Environment used: env_val Seed used: 0
+
+Episodes: ['Scenario_june_254', 'Scenario_april_004', 'Scenario_january_221', 'Scenario_august_195', 'Scenario_october_111', 'Scenario_july_303', 'Scenario_december_067', 'Scenario_january_242', 'Scenario_october_017', 'Scenario_june_318', 'Scenario_march_059', 'Scenario_august_167', 'Scenario_april_262', 'Scenario_november_247', 'Scenario_april_113', 'Scenario_december_024', 'Scenario_august_210', 'Scenario_april_220', 'Scenario_february_149', 'Scenario_october_258', 'Scenario_september_017', 'Scenario_january_183', 'Scenario_june_004', 'Scenario_january_132', 'Scenario_march_106', 'Scenario_june_243', 'Scenario_may_137', 'Scenario_february_132', 'Scenario_august_151', 'Scenario_june_254']
+Num timesteps 30  survived timesteps: [8062, 305, 2298, 2274, 3093, 409, 193, 546, 5346, 3123, 2415, 5994, 2286, 8062, 1323, 8062, 5080, 2132, 1652, 1131, 2015, 1307, 410, 8062, 6211, 5981, 1549, 2522, 8062, 2530]
+-> Average survived timesteps: 3414.5
+Memory used (GB): 1.5023193359375
+Environment used: env_val Seed used: 1
+
+Episodes: ['Scenario_january_242', 'Scenario_august_151', 'Scenario_february_132', 'Scenario_april_220', 'Scenario_january_221', 'Scenario_august_210', 'Scenario_october_111', 'Scenario_june_004', 'Scenario_march_106', 'Scenario_october_258', 'Scenario_february_149', 'Scenario_april_004', 'Scenario_august_167', 'Scenario_april_262', 'Scenario_january_183', 'Scenario_december_024', 'Scenario_august_195', 'Scenario_april_113', 'Scenario_march_059', 'Scenario_july_303', 'Scenario_november_247', 'Scenario_may_137', 'Scenario_december_067', 'Scenario_june_243', 'Scenario_october_017', 'Scenario_january_132', 'Scenario_june_318', 'Scenario_september_017', 'Scenario_june_254', 'Scenario_january_242']
+Num timesteps 30  survived timesteps: [8062, 10, 5016, 2526, 3737, 4896, 8062, 1659, 3103, 2820, 5999, 8062, 8062, 1975, 1157, 8062, 7132, 1655, 8062, 122, 4293, 533, 8062, 1066, 1275, 2045, 1640, 8062, 508, 2703]
+-> Average survived timesteps: 4012.2
+Memory used (GB): 1.5135726928710938
+Environment used: env_val Seed used: 2
+
+
+Episodes: ['Scenario_june_318', 'Scenario_august_151', 'Scenario_february_132', 'Scenario_april_262', 'Scenario_april_220', 'Scenario_november_247', 'Scenario_june_254', 'Scenario_december_067', 'Scenario_march_059', 'Scenario_august_210', 'Scenario_january_132', 'Scenario_august_167', 'Scenario_june_004', 'Scenario_march_106', 'Scenario_january_183', 'Scenario_october_017', 'Scenario_january_221', 'Scenario_may_137', 'Scenario_january_242', 'Scenario_december_024', 'Scenario_october_111', 'Scenario_july_303', 'Scenario_october_258', 'Scenario_february_149', 'Scenario_april_113', 'Scenario_june_243', 'Scenario_august_195', 'Scenario_september_017', 'Scenario_april_004', 'Scenario_june_318']
+Num timesteps 30  survived timesteps: [8062, 2277, 3092, 3128, 158, 6618, 783, 3123, 6572, 243, 8062, 1116, 1975, 452, 591, 715, 4488, 1132, 971, 4301, 545, 6246, 1054, 8062, 8062, 2531, 2809, 2530, 8062, 1497]
+-> Average survived timesteps: 3308.5666666666666
+Memory used (GB): 1.5020942687988281
+Environment used: env_val Seed used: 3
+
+Sin buckets (y 1255 acciones)
+
+$ python3.9 train.py Eval 30 0 & python3.9 train.py Eval 30 1 & python3.9 train.py Eval 30 2 & python3.9 train.py Eval 30 3
+
+Episodes: ['Scenario_june_254', 'Scenario_august_151', 'Scenario_february_132', 'Scenario_december_024', 'Scenario_june_004', 'Scenario_september_017', 'Scenario_january_183', 'Scenario_november_247', 'Scenario_april_220', 'Scenario_february_149', 'Scenario_july_303', 'Scenario_june_318', 'Scenario_august_167', 'Scenario_january_221', 'Scenario_april_113', 'Scenario_august_195', 'Scenario_march_059', 'Scenario_may_137', 'Scenario_january_242', 'Scenario_october_258', 'Scenario_august_210', 'Scenario_december_067', 'Scenario_march_106', 'Scenario_october_111', 'Scenario_october_017', 'Scenario_april_004', 'Scenario_june_243', 'Scenario_april_262', 'Scenario_january_132', 'Scenario_june_254']
+Num timesteps 30  survived timesteps: [5987, 1632, 306, 2295, 2276, 123, 235, 8062, 523, 8062, 8062, 2415, 2252, 8062, 494, 1978, 8062, 2381, 2880, 8062, 1130, 2015, 4301, 572, 8062, 6211, 8062, 113, 8062, 8062]
+-> Average survived timesteps: 4024.633333333333
+Memory used (GB): 1.5032730102539062
+Environment used: env_val Seed used: 0
+
+Episodes: ['Scenario_june_254', 'Scenario_april_004', 'Scenario_january_221', 'Scenario_august_195', 'Scenario_october_111', 'Scenario_july_303', 'Scenario_december_067', 'Scenario_january_242', 'Scenario_october_017', 'Scenario_june_318', 'Scenario_march_059', 'Scenario_august_167', 'Scenario_april_262', 'Scenario_november_247', 'Scenario_april_113', 'Scenario_december_024', 'Scenario_august_210', 'Scenario_april_220', 'Scenario_february_149', 'Scenario_october_258', 'Scenario_september_017', 'Scenario_january_183', 'Scenario_june_004', 'Scenario_january_132', 'Scenario_march_106', 'Scenario_june_243', 'Scenario_may_137', 'Scenario_february_132', 'Scenario_august_151', 'Scenario_june_254']
+Num timesteps 30  survived timesteps: [8062, 305, 2298, 2274, 3093, 409, 193, 546, 5346, 3123, 2415, 5994, 2286, 8062, 1323, 8062, 5080, 2132, 1652, 1131, 2015, 1307, 410, 8062, 6211, 5981, 1549, 2522, 8062, 2530]
+-> Average survived timesteps: 3414.5
+Memory used (GB): 1.5000724792480469
+Environment used: env_val Seed used: 1
+
+Episodes: ['Scenario_january_242', 'Scenario_august_151', 'Scenario_february_132', 'Scenario_april_220', 'Scenario_january_221', 'Scenario_august_210', 'Scenario_october_111', 'Scenario_june_004', 'Scenario_march_106', 'Scenario_october_258', 'Scenario_february_149', 'Scenario_april_004', 'Scenario_august_167', 'Scenario_april_262', 'Scenario_january_183', 'Scenario_december_024', 'Scenario_august_195', 'Scenario_april_113', 'Scenario_march_059', 'Scenario_july_303', 'Scenario_november_247', 'Scenario_may_137', 'Scenario_december_067', 'Scenario_june_243', 'Scenario_october_017', 'Scenario_january_132', 'Scenario_june_318', 'Scenario_september_017', 'Scenario_june_254', 'Scenario_january_242']
+Num timesteps 30  survived timesteps: [8062, 10, 5016, 2526, 3737, 4896, 8062, 1659, 3103, 2820, 5999, 8062, 8062, 1975, 1157, 8062, 7132, 1655, 8062, 122, 4293, 533, 8062, 1066, 1275, 2045, 1640, 8062, 508, 2703]
+-> Average survived timesteps: 4012.2
+Memory used (GB): 1.5064888000488281
+Environment used: env_val Seed used: 2
+
+Episodes: ['Scenario_june_318', 'Scenario_august_151', 'Scenario_february_132', 'Scenario_april_262', 'Scenario_april_220', 'Scenario_november_247', 'Scenario_june_254', 'Scenario_december_067', 'Scenario_march_059', 'Scenario_august_210', 'Scenario_january_132', 'Scenario_august_167', 'Scenario_june_004', 'Scenario_march_106', 'Scenario_january_183', 'Scenario_october_017', 'Scenario_january_221', 'Scenario_may_137', 'Scenario_january_242', 'Scenario_december_024', 'Scenario_october_111', 'Scenario_july_303', 'Scenario_october_258', 'Scenario_february_149', 'Scenario_april_113', 'Scenario_june_243', 'Scenario_august_195', 'Scenario_september_017', 'Scenario_april_004', 'Scenario_june_318']
+Num timesteps 30  survived timesteps: [8062, 2277, 3092, 3128, 158, 6618, 783, 3123, 6572, 243, 8062, 1116, 1975, 452, 591, 715, 4488, 1132, 971, 4301, 545, 6246, 1054, 8062, 8062, 2531, 2809, 2530, 8062, 1497]
+-> Average survived timesteps: 3308.5666666666666
+Memory used (GB): 1.50189208984375
+Environment used: env_val Seed used: 3
+
+Sin buckets (y 62+146 acciones)
+
+$ python3.9 train.py Eval 30 0 & python3.9 train.py Eval 30 1 & python3.9 train.py Eval 30 2 & python3.9 train.py Eval 30 3
+
+Episodes: ['Scenario_june_254', 'Scenario_august_151', 'Scenario_february_132', 'Scenario_december_024', 'Scenario_june_004', 'Scenario_september_017', 'Scenario_january_183', 'Scenario_november_247', 'Scenario_april_220', 'Scenario_february_149', 'Scenario_july_303', 'Scenario_june_318', 'Scenario_august_167', 'Scenario_january_221', 'Scenario_april_113', 'Scenario_august_195', 'Scenario_march_059', 'Scenario_may_137', 'Scenario_january_242', 'Scenario_october_258', 'Scenario_august_210', 'Scenario_december_067', 'Scenario_march_106', 'Scenario_october_111', 'Scenario_october_017', 'Scenario_april_004', 'Scenario_june_243', 'Scenario_april_262', 'Scenario_january_132', 'Scenario_june_254']
+Num timesteps 30  survived timesteps: [5992, 1632, 306, 8062, 2276, 123, 406, 8062, 1561, 8062, 8062, 2415, 239, 8062, 3567, 1975, 7134, 2374, 436, 8062, 1130, 2015, 4302, 566, 8062, 8062, 5984, 113, 8062, 2810]
+-> Average survived timesteps: 3997.133333333333
+Memory used (GB): 0.7247047424316406
+Environment used: env_val Seed used: 0
+
+Episodes: ['Scenario_june_254', 'Scenario_april_004', 'Scenario_january_221', 'Scenario_august_195', 'Scenario_october_111', 'Scenario_july_303', 'Scenario_december_067', 'Scenario_january_242', 'Scenario_october_017', 'Scenario_june_318', 'Scenario_march_059', 'Scenario_august_167', 'Scenario_april_262', 'Scenario_november_247', 'Scenario_april_113', 'Scenario_december_024', 'Scenario_august_210', 'Scenario_april_220', 'Scenario_february_149', 'Scenario_october_258', 'Scenario_september_017', 'Scenario_january_183', 'Scenario_june_004', 'Scenario_january_132', 'Scenario_march_106', 'Scenario_june_243', 'Scenario_may_137', 'Scenario_february_132', 'Scenario_august_151', 'Scenario_june_254']
+Num timesteps 30  survived timesteps: [1646, 305, 2300, 2282, 7478, 385, 189, 580, 8062, 3123, 2415, 5994, 1538, 8062, 1976, 8062, 7130, 2864, 425, 1131, 2015, 8062, 411, 422, 8062, 5980, 1546, 3098, 8062, 2530]
+-> Average survived timesteps: 3537.8333333333335
+Memory used (GB): 0.7568702697753906
+Environment used: env_val Seed used: 1
+
+Episodes: ['Scenario_january_242', 'Scenario_august_151', 'Scenario_february_132', 'Scenario_april_220', 'Scenario_january_221', 'Scenario_august_210', 'Scenario_october_111', 'Scenario_june_004', 'Scenario_march_106', 'Scenario_october_258', 'Scenario_february_149', 'Scenario_april_004', 'Scenario_august_167', 'Scenario_april_262', 'Scenario_january_183', 'Scenario_december_024', 'Scenario_august_195', 'Scenario_april_113', 'Scenario_march_059', 'Scenario_july_303', 'Scenario_november_247', 'Scenario_may_137', 'Scenario_december_067', 'Scenario_june_243', 'Scenario_october_017', 'Scenario_january_132', 'Scenario_june_318', 'Scenario_september_017', 'Scenario_june_254', 'Scenario_january_242']
+Num timesteps 30  survived timesteps: [8062, 10, 5101, 2522, 8062, 4894, 8062, 1662, 738, 2818, 5997, 8062, 8062, 1975, 1144, 8062, 7126, 1653, 8062, 122, 8062, 533, 8062, 887, 1275, 8062, 1605, 8062, 509, 2703]
+-> Average survived timesteps: 4398.533333333334
+Memory used (GB): 0.7570648193359375
+Environment used: env_val Seed used: 2
+
+Episodes: ['Scenario_june_318', 'Scenario_august_151', 'Scenario_february_132', 'Scenario_april_262', 'Scenario_april_220', 'Scenario_november_247', 'Scenario_june_254', 'Scenario_december_067', 'Scenario_march_059', 'Scenario_august_210', 'Scenario_january_132', 'Scenario_august_167', 'Scenario_june_004', 'Scenario_march_106', 'Scenario_january_183', 'Scenario_october_017', 'Scenario_january_221', 'Scenario_may_137', 'Scenario_january_242', 'Scenario_december_024', 'Scenario_october_111', 'Scenario_july_303', 'Scenario_october_258', 'Scenario_february_149', 'Scenario_april_113', 'Scenario_june_243', 'Scenario_august_195', 'Scenario_september_017', 'Scenario_april_004', 'Scenario_june_318']
+Num timesteps 30  survived timesteps: [8062, 251, 2536, 3128, 165, 8062, 783, 3123, 6572, 239, 8062, 7503, 1975, 447, 591, 716, 8062, 1132, 971, 4302, 545, 422, 1043, 8062, 8062, 2537, 2811, 2530, 8062, 1497]
+-> Average survived timesteps: 3408.4333333333334
+Memory used (GB): 0.7658309936523438
+Environment used: env_val Seed used: 3
+
+
+>>>>>>>>>>>>>>>>>>>
+
+1255 vs 46+146
+(0.8 min rho)
+
+1255 (0.8 min rho):
+
+$ python3.9 train.py EvalInTraining 50 0 & python3.9 train.py EvalInTraining 50 1
+
+Episodes: ['Scenario_april_034', 'Scenario_february_066', 'Scenario_january_215', 'Scenario_december_238', 'Scenario_october_177', 'Scenario_november_117', 'Scenario_december_004', 'Scenario_february_050', 'Scenario_april_211', 'Scenario_may_059', 'Scenario_december_234', 'Scenario_march_002', 'Scenario_may_027', 'Scenario_december_025', 'Scenario_april_196', 'Scenario_october_087', 'Scenario_march_075', 'Scenario_november_186', 'Scenario_december_138', 'Scenario_december_042', 'Scenario_august_212', 'Scenario_june_270', 'Scenario_march_151', 'Scenario_july_085', 'Scenario_may_275', 'Scenario_august_251', 'Scenario_september_181', 'Scenario_october_197', 'Scenario_october_234', 'Scenario_february_142', 'Scenario_december_267', 'Scenario_may_298', 'Scenario_may_071', 'Scenario_july_353', 'Scenario_november_036', 'Scenario_july_003', 'Scenario_july_265', 'Scenario_february_055', 'Scenario_june_260', 'Scenario_june_242', 'Scenario_december_097', 'Scenario_march_018', 'Scenario_april_130', 'Scenario_march_254', 'Scenario_october_107', 'Scenario_july_130', 'Scenario_december_248', 'Scenario_june_052', 'Scenario_may_010', 'Scenario_june_343']
+Num timesteps 50  survived timesteps: [434, 1632, 305, 12, 1025, 504, 384, 316, 4812, 791, 3120, 3684, 1584, 2061, 617, 1961, 151, 111, 2870, 342, 215, 2015, 4287, 187, 3806, 1087, 290, 431, 125, 740, 487, 85, 623, 1381, 787, 4351, 151, 7401, 4279, 582, 327, 650, 1948, 824, 2267, 1070, 552, 3982, 506, 1372]
+-> Average survived timesteps: 1470.48
+Memory used (GB): 1.5623207092285156
+Environment used: env_train Seed used: 0
+
+Episodes: ['Scenario_may_151', 'Scenario_june_096', 'Scenario_april_228', 'Scenario_july_089', 'Scenario_august_121', 'Scenario_november_144', 'Scenario_june_302', 'Scenario_october_193', 'Scenario_january_148', 'Scenario_march_163', 'Scenario_august_246', 'Scenario_february_184', 'Scenario_november_159', 'Scenario_september_156', 'Scenario_december_086', 'Scenario_august_239', 'Scenario_november_174', 'Scenario_september_237', 'Scenario_february_103', 'Scenario_april_149', 'Scenario_february_256', 'Scenario_february_182', 'Scenario_december_079', 'Scenario_october_021', 'Scenario_january_233', 'Scenario_november_085', 'Scenario_december_263', 'Scenario_september_218', 'Scenario_january_116', 'Scenario_august_022', 'Scenario_august_063', 'Scenario_october_068', 'Scenario_july_158', 'Scenario_june_143', 'Scenario_december_042', 'Scenario_february_072', 'Scenario_april_001', 'Scenario_february_116', 'Scenario_march_148', 'Scenario_may_031', 'Scenario_march_242', 'Scenario_february_201', 'Scenario_august_122', 'Scenario_october_136', 'Scenario_december_154', 'Scenario_march_247', 'Scenario_september_020', 'Scenario_november_007', 'Scenario_october_035', 'Scenario_april_058']
+Num timesteps 50  survived timesteps: [3784, 303, 2954, 121, 141, 4181, 118, 520, 798, 3120, 218, 413, 1047, 138, 2372, 224, 7130, 699, 1055, 1134, 122, 2049, 279, 740, 260, 768, 1033, 1489, 2082, 487, 84, 623, 217, 1135, 137, 4863, 507, 3948, 579, 302, 653, 1837, 152, 164, 4150, 571, 652, 154, 1053, 570]
+-> Average survived timesteps: 1242.6
+Memory used (GB): 1.5633430480957031
+Environment used: env_train Seed used: 1
+
+
+46+146 (0.8 min rho):
+
+$ python3.9 train.py EvalInTraining 50 0 & python3.9 train.py EvalInTraining 50 1
+
+Episodes: ['Scenario_april_034', 'Scenario_february_066', 'Scenario_january_215', 'Scenario_december_238', 'Scenario_october_177', 'Scenario_november_117', 'Scenario_december_004', 'Scenario_february_050', 'Scenario_april_211', 'Scenario_may_059', 'Scenario_december_234', 'Scenario_march_002', 'Scenario_may_027', 'Scenario_december_025', 'Scenario_april_196', 'Scenario_october_087', 'Scenario_march_075', 'Scenario_november_186', 'Scenario_december_138', 'Scenario_december_042', 'Scenario_august_212', 'Scenario_june_270', 'Scenario_march_151', 'Scenario_july_085', 'Scenario_may_275', 'Scenario_august_251', 'Scenario_september_181', 'Scenario_october_197', 'Scenario_october_234', 'Scenario_february_142', 'Scenario_december_267', 'Scenario_may_298', 'Scenario_may_071', 'Scenario_july_353', 'Scenario_november_036', 'Scenario_july_003', 'Scenario_july_265', 'Scenario_february_055', 'Scenario_june_260', 'Scenario_june_242', 'Scenario_december_097', 'Scenario_march_018', 'Scenario_april_130', 'Scenario_march_254', 'Scenario_october_107', 'Scenario_july_130', 'Scenario_december_248', 'Scenario_june_052', 'Scenario_may_010', 'Scenario_june_343']
+Num timesteps 50  survived timesteps: [412, 1331, 305, 11, 1025, 168, 384, 8062, 8062, 778, 3120, 8062, 786, 7613, 617, 1975, 429, 591, 1023, 1661, 8062, 2015, 8062, 4093, 8062, 1080, 287, 130, 1546, 1040, 8062, 816, 8062, 692, 1169, 6033, 128, 8062, 8062, 582, 349, 3091, 1948, 143, 903, 258, 8062, 2662, 8062, 1372]
+-> Average survived timesteps: 2986.2
+Memory used (GB): 0.9860992431640625
+Environment used: env_train Seed used: 0
+
+
+Episodes: ['Scenario_may_151', 'Scenario_june_096', 'Scenario_april_228', 'Scenario_july_089', 'Scenario_august_121', 'Scenario_november_144', 'Scenario_june_302', 'Scenario_october_193', 'Scenario_january_148', 'Scenario_march_163', 'Scenario_august_246', 'Scenario_february_184', 'Scenario_november_159', 'Scenario_september_156', 'Scenario_december_086', 'Scenario_august_239', 'Scenario_november_174', 'Scenario_september_237', 'Scenario_february_103', 'Scenario_april_149', 'Scenario_february_256', 'Scenario_february_182', 'Scenario_december_079', 'Scenario_october_021', 'Scenario_january_233', 'Scenario_november_085', 'Scenario_december_263', 'Scenario_september_218', 'Scenario_january_116', 'Scenario_august_022', 'Scenario_august_063', 'Scenario_october_068', 'Scenario_july_158', 'Scenario_june_143', 'Scenario_december_042', 'Scenario_february_072', 'Scenario_april_001', 'Scenario_february_116', 'Scenario_march_148', 'Scenario_may_031', 'Scenario_march_242', 'Scenario_february_201', 'Scenario_august_122', 'Scenario_october_136', 'Scenario_december_154', 'Scenario_march_247', 'Scenario_september_020', 'Scenario_november_007', 'Scenario_october_035', 'Scenario_april_058']
+Num timesteps 50  survived timesteps: [4275, 5611, 7562, 154, 420, 8062, 167, 520, 802, 4063, 796, 258, 1046, 614, 7537, 1145, 8062, 2864, 7443, 457, 131, 996, 279, 1085, 160, 711, 1556, 711, 2811, 2556, 84, 8062, 8062, 1023, 525, 4863, 2843, 4281, 2124, 302, 653, 3735, 822, 314, 4241, 603, 117, 190, 3084, 6628]
+-> Average survived timesteps: 2508.2
+Memory used (GB): 0.9754219055175781
+Environment used: env_train Seed used: 1
+
+
+Ahora con 1.0 min rho:
+
+$ python3.9 train.py EvalInTraining 50 0 & python3.9 train.py EvalInTraining 50 1
+(1.0 rho)
+1255 buckets
+
+Episodes: ['Scenario_april_034', 'Scenario_february_066', 'Scenario_january_215', 'Scenario_december_238', 'Scenario_october_177', 'Scenario_november_117', 'Scenario_december_004', 'Scenario_february_050', 'Scenario_april_211', 'Scenario_may_059', 'Scenario_december_234', 'Scenario_march_002', 'Scenario_may_027', 'Scenario_december_025', 'Scenario_april_196', 'Scenario_october_087', 'Scenario_march_075', 'Scenario_november_186', 'Scenario_december_138', 'Scenario_december_042', 'Scenario_august_212', 'Scenario_june_270', 'Scenario_march_151', 'Scenario_july_085', 'Scenario_may_275', 'Scenario_august_251', 'Scenario_september_181', 'Scenario_october_197', 'Scenario_october_234', 'Scenario_february_142', 'Scenario_december_267', 'Scenario_may_298', 'Scenario_may_071', 'Scenario_july_353', 'Scenario_november_036', 'Scenario_july_003', 'Scenario_july_265', 'Scenario_february_055', 'Scenario_june_260', 'Scenario_june_242', 'Scenario_december_097', 'Scenario_march_018', 'Scenario_april_130', 'Scenario_march_254', 'Scenario_october_107', 'Scenario_july_130', 'Scenario_december_248', 'Scenario_june_052', 'Scenario_may_010', 'Scenario_june_343']
+Num timesteps 50  survived timesteps: [558, 1632, 305, 12, 1030, 168, 382, 8062, 8062, 797, 3123, 6572, 2678, 6520, 617, 1976, 1146, 591, 4748, 1662, 8062, 2015, 1354, 3481, 8062, 8062, 289, 2032, 2500, 1142, 8062, 4929, 8062, 692, 1665, 5701, 1716, 8062, 8062, 582, 2222, 3092, 1948, 824, 8062, 1147, 4296, 2648, 5440, 1372]
+-> Average survived timesteps: 3324.48
+Memory used (GB): 1.5161514282226562
+Environment used: env_train Seed used: 0
+
+Episodes: ['Scenario_may_151', 'Scenario_june_096', 'Scenario_april_228', 'Scenario_july_089', 'Scenario_august_121', 'Scenario_november_144', 'Scenario_june_302', 'Scenario_october_193', 'Scenario_january_148', 'Scenario_march_163', 'Scenario_august_246', 'Scenario_february_184', 'Scenario_november_159', 'Scenario_september_156', 'Scenario_december_086', 'Scenario_august_239', 'Scenario_november_174', 'Scenario_september_237', 'Scenario_february_103', 'Scenario_april_149', 'Scenario_february_256', 'Scenario_february_182', 'Scenario_december_079', 'Scenario_october_021', 'Scenario_january_233', 'Scenario_november_085', 'Scenario_december_263', 'Scenario_september_218', 'Scenario_january_116', 'Scenario_august_022', 'Scenario_august_063', 'Scenario_october_068', 'Scenario_july_158', 'Scenario_june_143', 'Scenario_december_042', 'Scenario_february_072', 'Scenario_april_001', 'Scenario_february_116', 'Scenario_march_148', 'Scenario_may_031', 'Scenario_march_242', 'Scenario_february_201', 'Scenario_august_122', 'Scenario_october_136', 'Scenario_december_154', 'Scenario_march_247', 'Scenario_september_020', 'Scenario_november_007', 'Scenario_october_035', 'Scenario_april_058']
+Num timesteps 50  survived timesteps: [8062, 6583, 6643, 2279, 2499, 8062, 167, 524, 801, 4835, 1874, 240, 1043, 617, 8062, 1145, 7130, 2864, 1660, 1131, 2015, 4295, 279, 4913, 265, 1276, 1564, 2496, 2804, 5586, 294, 8062, 7128, 822, 2234, 4863, 515, 3947, 8062, 302, 656, 8062, 103, 832, 7979, 553, 652, 171, 3095, 8062]
+-> Average survived timesteps: 3162.16
+Memory used (GB): 1.5161819458007812
+Environment used: env_train Seed used: 1
+
+$ python3.9 train.py EvalInTraining 50 0 & python3.9 train.py EvalInTraining 50 1
+(1.0 rho)
+62+142 buckets:
+
+Episodes: ['Scenario_april_034', 'Scenario_february_066', 'Scenario_january_215', 'Scenario_december_238', 'Scenario_october_177', 'Scenario_november_117', 'Scenario_december_004', 'Scenario_february_050', 'Scenario_april_211', 'Scenario_may_059', 'Scenario_december_234', 'Scenario_march_002', 'Scenario_may_027', 'Scenario_december_025', 'Scenario_april_196', 'Scenario_october_087', 'Scenario_march_075', 'Scenario_november_186', 'Scenario_december_138', 'Scenario_december_042', 'Scenario_august_212', 'Scenario_june_270', 'Scenario_march_151', 'Scenario_july_085', 'Scenario_may_275', 'Scenario_august_251', 'Scenario_september_181', 'Scenario_october_197', 'Scenario_october_234', 'Scenario_february_142', 'Scenario_december_267', 'Scenario_may_298', 'Scenario_may_071', 'Scenario_july_353', 'Scenario_november_036', 'Scenario_july_003', 'Scenario_july_265', 'Scenario_february_055', 'Scenario_june_260', 'Scenario_june_242', 'Scenario_december_097', 'Scenario_march_018', 'Scenario_april_130', 'Scenario_march_254', 'Scenario_october_107', 'Scenario_july_130', 'Scenario_december_248', 'Scenario_june_052', 'Scenario_may_010', 'Scenario_june_343']
+Num timesteps 50  survived timesteps: [558, 1632, 305, 11, 1659, 168, 384, 8062, 8062, 778, 3123, 8062, 2263, 8062, 617, 1975, 1144, 591, 4729, 1662, 8062, 2018, 8062, 8062, 8062, 8062, 289, 2035, 2500, 1142, 8062, 4929, 8062, 692, 1665, 5701, 737, 8062, 8062, 582, 2222, 3092, 1948, 824, 873, 1127, 8062, 3982, 5440, 1375]
+-> Average survived timesteps: 3552.8
+Memory used (GB): 0.7999725341796875
+Environment used: env_train Seed used: 0
+
+Episodes: ['Scenario_may_151', 'Scenario_june_096', 'Scenario_april_228', 'Scenario_july_089', 'Scenario_august_121', 'Scenario_november_144', 'Scenario_june_302', 'Scenario_october_193', 'Scenario_january_148', 'Scenario_march_163', 'Scenario_august_246', 'Scenario_february_184', 'Scenario_november_159', 'Scenario_september_156', 'Scenario_december_086', 'Scenario_august_239', 'Scenario_november_174', 'Scenario_september_237', 'Scenario_february_103', 'Scenario_april_149', 'Scenario_february_256', 'Scenario_february_182', 'Scenario_december_079', 'Scenario_october_021', 'Scenario_january_233', 'Scenario_november_085', 'Scenario_december_263', 'Scenario_september_218', 'Scenario_january_116', 'Scenario_august_022', 'Scenario_august_063', 'Scenario_october_068', 'Scenario_july_158', 'Scenario_june_143', 'Scenario_december_042', 'Scenario_february_072', 'Scenario_april_001', 'Scenario_february_116', 'Scenario_march_148', 'Scenario_may_031', 'Scenario_march_242', 'Scenario_february_201', 'Scenario_august_122', 'Scenario_october_136', 'Scenario_december_154', 'Scenario_march_247', 'Scenario_september_020', 'Scenario_november_007', 'Scenario_october_035', 'Scenario_april_058']
+Num timesteps 50  survived timesteps: [8062, 6583, 6643, 2283, 448, 8062, 186, 524, 796, 4840, 3554, 240, 1068, 617, 8062, 1145, 7133, 734, 1663, 1131, 2015, 4295, 279, 4913, 265, 1277, 2035, 2496, 2808, 5586, 296, 8062, 7128, 822, 2234, 4863, 506, 3948, 8062, 302, 653, 8062, 822, 833, 7978, 553, 652, 192, 3096, 8062]
+-> Average survived timesteps: 3137.38
+Memory used (GB): 0.8556785583496094
+Environment used: env_train Seed used: 1
+
+$ python3.9 train.py EvalInTraining 50 0 & python3.9 train.py EvalInTraining 50 1
+(1.0 rho)
+62 buckets:
+
+Episodes: ['Scenario_april_034', 'Scenario_february_066', 'Scenario_january_215', 'Scenario_december_238', 'Scenario_october_177', 'Scenario_november_117', 'Scenario_december_004', 'Scenario_february_050', 'Scenario_april_211', 'Scenario_may_059', 'Scenario_december_234', 'Scenario_march_002', 'Scenario_may_027', 'Scenario_december_025', 'Scenario_april_196', 'Scenario_october_087', 'Scenario_march_075', 'Scenario_november_186', 'Scenario_december_138', 'Scenario_december_042', 'Scenario_august_212', 'Scenario_june_270', 'Scenario_march_151', 'Scenario_july_085', 'Scenario_may_275', 'Scenario_august_251', 'Scenario_september_181', 'Scenario_october_197', 'Scenario_october_234', 'Scenario_february_142', 'Scenario_december_267', 'Scenario_may_298', 'Scenario_may_071', 'Scenario_july_353', 'Scenario_november_036', 'Scenario_july_003', 'Scenario_july_265', 'Scenario_february_055', 'Scenario_june_260', 'Scenario_june_242', 'Scenario_december_097', 'Scenario_march_018', 'Scenario_april_130', 'Scenario_march_254', 'Scenario_october_107', 'Scenario_july_130', 'Scenario_december_248', 'Scenario_june_052', 'Scenario_may_010', 'Scenario_june_343']
+Num timesteps 50  survived timesteps: [408, 1632, 305, 9, 1021, 124, 384, 286, 527, 783, 3123, 6574, 2251, 2289, 617, 1975, 1142, 591, 166, 1661, 8062, 2015, 8062, 537, 8062, 1070, 284, 2032, 2148, 1131, 2525, 802, 8062, 696, 1145, 5700, 722, 8062, 8062, 581, 302, 3091, 1948, 99, 8062, 1080, 570, 3986, 8062, 1372]
+-> Average survived timesteps: 2484.0
+Memory used (GB): 0.6331634521484375
+Environment used: env_train Seed used: 0
+
+Episodes: ['Scenario_may_151', 'Scenario_june_096', 'Scenario_april_228', 'Scenario_july_089', 'Scenario_august_121', 'Scenario_november_144', 'Scenario_june_302', 'Scenario_october_193', 'Scenario_january_148', 'Scenario_march_163', 'Scenario_august_246', 'Scenario_february_184', 'Scenario_november_159', 'Scenario_september_156', 'Scenario_december_086', 'Scenario_august_239', 'Scenario_november_174', 'Scenario_september_237', 'Scenario_february_103', 'Scenario_april_149', 'Scenario_february_256', 'Scenario_february_182', 'Scenario_december_079', 'Scenario_october_021', 'Scenario_january_233', 'Scenario_november_085', 'Scenario_december_263', 'Scenario_september_218', 'Scenario_january_116', 'Scenario_august_022', 'Scenario_august_063', 'Scenario_october_068', 'Scenario_july_158', 'Scenario_june_143', 'Scenario_december_042', 'Scenario_february_072', 'Scenario_april_001', 'Scenario_february_116', 'Scenario_march_148', 'Scenario_may_031', 'Scenario_march_242', 'Scenario_february_201', 'Scenario_august_122', 'Scenario_october_136', 'Scenario_december_154', 'Scenario_march_247', 'Scenario_september_020', 'Scenario_november_007', 'Scenario_october_035', 'Scenario_april_058']
+Num timesteps 50  survived timesteps: [4264, 5098, 8062, 133, 2500, 8062, 177, 523, 783, 3108, 1184, 239, 1043, 617, 1976, 1142, 5383, 721, 1652, 1131, 131, 4295, 278, 434, 263, 1280, 2032, 2143, 2804, 2525, 293, 8062, 8062, 825, 140, 1715, 500, 3386, 8062, 302, 652, 1948, 105, 819, 7939, 553, 652, 187, 1372, 7714]
+-> Average survived timesteps: 2345.42
+Memory used (GB): 0.7896156311035156
+Environment used: env_train Seed used: 1

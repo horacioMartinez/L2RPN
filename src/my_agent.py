@@ -5,7 +5,6 @@ import inspect
 import numpy as np
 import sys
 from grid2op.Agent import BaseAgent
-from buckets import Buckets
 
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -18,8 +17,6 @@ def print_echo(expr):
 
 start_time = time.time()
 global_min_rho = 0
-
-buckets = Buckets()
 
 
 class MyAgent(BaseAgent):
@@ -126,7 +123,6 @@ class MyAgent(BaseAgent):
                 return action
 
     def act(self, observation, reward, done=False):
-        global buckets
         global global_min_rho
         global start_time
         # print("--- %s seconds ---" % (time.time() - start_time))
@@ -155,7 +151,6 @@ class MyAgent(BaseAgent):
             return self.do_nothing_action
 
         sorted_actions = np.arange(len(self.all_actions))
-        buckets.update_bucket(observation, sorted_actions)
 
         o, _, d, info_simulate = observation.simulate(self.do_nothing_action)
         observation._obs_env._reset_to_orig_state()
@@ -195,12 +190,6 @@ class MyAgent(BaseAgent):
 
         start_time = time.time()
         return selected_action
-
-    def end(self):
-        global buckets
-        # print("BUCKETS -----------------_> ")
-        # print(buckets.buckets_)
-        # buckets.save_buckets_to_disk()
 
 
 def make_agent(env):

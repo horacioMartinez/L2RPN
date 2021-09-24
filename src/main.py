@@ -19,6 +19,7 @@ from baseline_agents.L2RPN_NIPS_2020_a_PPO_Solution.submission.wrapper import ma
 from grid2op.Runner import Runner
 from grid2op.Episode import EpisodeReplay
 
+from submission.my_agent import make_agent as make_agent_submission
 from my_agent import make_agent
 
 
@@ -37,7 +38,7 @@ def scoreAgent(make_agent, competition, number_of_scenarios, saveGif):
         # track = "l2rpn_icaps_2021_small"
         track = "l2rpn_icaps_2021_large_val"
     env = grid2op.make(track, backend=BACKEND())
-    agent = make_agent(env)
+    agent = make_agent(env, "./submission/")
     my_score = scoring_function(
         env,
         nb_scenario=number_of_scenarios,
@@ -142,6 +143,8 @@ elif selectedAgent == "PPO":
     scoreAgent(make_PPO_agent, year, number_of_scenarios, False)
 elif selectedAgent == "Mio":
     scoreAgent(make_agent, year, number_of_scenarios, False)
+elif selectedAgent == "Submission":
+    scoreAgent(make_agent_submission, year, number_of_scenarios, False)
 else:
     print("Unknown agent", selectedAgent)
     exit(0)
