@@ -1,3 +1,4 @@
+from mmap import ALLOCATIONGRANULARITY
 import sys
 import random
 import resource
@@ -17,6 +18,7 @@ from scipy.optimize.optimize import bracket
 from buckets import Buckets
 
 # NOTE: Final agent should have same thresholds !
+ALARM_RHO_THRESHOLD = 1.0
 RHO_THRESHOLD = 1.0
 RHO_THRESHOLD_RESET_REDISPATCH = 1.0
 RHO_THRESHOLD_RECONNECT = 1.0
@@ -74,8 +76,8 @@ class Trainer(BaseAgent):
         self.bus_actions1255 = np.load(os.path.join("./data/", bus_actions1255_name))
         self.bus_actions_62_146_1255 = np.concatenate((self.bus_actions_62_146, self.bus_actions1255), axis=0)
         self.redispatch_actions = np.load(os.path.join("./data/", redispatch_actions_name))
-        self.all_actions = np.concatenate((self.do_nothing_action_vect, self.bus_actions_62_146), axis=0)
-        print("bus_actions_62_146 actions SIN BUCKETS")
+        self.all_actions = np.concatenate((self.do_nothing_action_vect, self.bus_actions62), axis=0)
+        print("bus_actions_62 actions SIN BUCKETS")
 
         buckets_save_file = "./data/buckets-" + str(len(self.all_actions)) + ".pkl"
         print("buckets_save_file:", buckets_save_file)
@@ -212,6 +214,50 @@ class Trainer(BaseAgent):
         else:
             return self.is_legal_redispatch_action(action, observation)
 
+    def process_alarm_action(self, env, observation):
+        # print("observation.is_alarm_illegal", observation.is_alarm_illegal)
+        # print("observation.time_since_last_alarm", observation.time_since_last_alarm)
+        # print("observation.last_alarm", observation.last_alarm)
+        # print("observation.attention_budget", observation.attention_budget)
+        # print("observation.was_alarm_used_after_game_over", observation.was_alarm_used_after_game_over)
+
+        alarms_lines_area = env.alarms_lines_area
+        alarms_area_names = env.alarms_area_names
+
+        # extract the zones they belong too
+        zones_these_lines = set()
+        zone_for_each_lines = alarms_lines_area
+        lines_overloaded = np.where(observation.rho >= 1)[0].tolist()  # obs.rho>0.6
+        # print(lines_overloaded)
+        for line_id in lines_overloaded:
+            line_name = observation.name_line[line_id]
+            for zone_name in zone_for_each_lines[line_name]:
+                zones_these_lines.add(zone_name)
+
+        zones_these_lines = list(zones_these_lines)
+        zones_ids_these_lines = [alarms_area_names.index(zone) for zone in zones_these_lines]
+
+        zones_alert = zones_ids_these_lines
+        # print(zones_alert)
+        alarm_action = self.action_space({"raise_alarm": zones_alert})
+        return alarm_action
+
+    def combine_actions(self, actionA, actionB, observation):
+        if actionA == None:
+            return actionB
+        if actionB == None:
+            return actionA
+        combined_action = actionA + actionB
+        (
+            obs_simulate,
+            reward_simulate,
+            done_simulate,
+            info_simulate,
+        ) = observation.simulate(combined_action)
+        observation._obs_env._reset_to_orig_state()
+        assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
+        return combined_action
+
     def act(self, env, observation, reward, training, below_rho_threshold, done=False):
         global start_time
         global first_env_since_overflow
@@ -252,15 +298,23 @@ class Trainer(BaseAgent):
 
         # buckets.update_bucket(observation, sorted_actions)
 
+        alarm_action = None
+        alarm_is_legal = observation.attention_budget[0] >= 1.0
+        alarm_doesnt_overlap = observation.time_since_last_alarm[0] == -1 or observation.time_since_last_alarm[0] > 5
+        # We could avoid triggering alarm if we already did before the max/min timesteps. What happens if two alarms are triggered ???
+        if alarm_is_legal and alarm_doesnt_overlap and observation.rho.max() > ALARM_RHO_THRESHOLD:
+            print("LEGAL!")
+            alarm_action = self.process_alarm_action(env, observation)
+
         o, _, d, info_simulate = observation.simulate(self.do_nothing_action)
         observation._obs_env._reset_to_orig_state()
         assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
 
         min_rho = o.rho.max() if not d else 9999
-        print(
-            "%s, heavy load, line-%d load is %.2f"
-            % (str(observation.get_time_stamp()), observation.rho.argmax(), observation.rho.max())
-        )
+        # print(
+        #    "%s, heavy load, line-%d load is %.2f"
+        #    % (str(observation.get_time_stamp()), observation.rho.argmax(), observation.rho.max())
+        # )
 
         if training:
             banned_actions_indexes = []
@@ -275,22 +329,22 @@ class Trainer(BaseAgent):
                 if is_legal:
                     return selected_action, action_index
                 banned_actions_indexes.append(action_index)
-        # else
-        # # Pick greedy action if possible:
-        # sorted_actions_indexes = self.buckets.get_actions_sorted_by_value(observation)
-        # if sorted_actions_indexes.size > 0:
-        #     index = 0
-        #     while index < len(sorted_actions_indexes):
-        #         action_index = sorted_actions_indexes[index]
-        #         selected_action = self.action_space.from_vect(self.all_actions[action_index])
-        #         if action_index == 0:
-        #             # Do nothing action
-        #             assert np.array_equal(self.all_actions[action_index], self.do_nothing_action.to_vect())
-        #             return selected_action, action_index
-        #         is_legal = self.is_legal_action(selected_action, observation)
-        #         if is_legal:
-        #             return selected_action, action_index
-        #         index += 1
+        # else:
+        #     # Pick greedy action if possible:
+        #     sorted_actions_indexes = self.buckets.get_actions_sorted_by_value(observation)
+        #     if sorted_actions_indexes.size > 0:
+        #         index = 0
+        #         while index < len(sorted_actions_indexes):
+        #             action_index = sorted_actions_indexes[index]
+        #             selected_action = self.action_space.from_vect(self.all_actions[action_index])
+        #             if action_index == 0:
+        #                 # Do nothing action
+        #                 assert np.array_equal(self.all_actions[action_index], self.do_nothing_action.to_vect())
+        #                 return self.combine_actions(alarm_action, selected_action, observation), action_index
+        #             is_legal = self.is_legal_action(selected_action, observation)
+        #             if is_legal:
+        #                 return self.combine_actions(alarm_action, selected_action, observation), action_index
+        #             index += 1
 
         # 1-depth simulation search of action with least rho.
         selected_action = self.action_space({})
@@ -313,7 +367,8 @@ class Trainer(BaseAgent):
                 selected_action = action
 
         start_time = time.time()
-        return selected_action, -1
+        print(self.combine_actions(alarm_action, selected_action, observation))
+        return self.combine_actions(alarm_action, selected_action, observation), -1
 
     def get_action_from_index(self, observation, action_index):
         selected_action = self.action_space.from_vect(self.all_actions[action_index])
@@ -582,6 +637,9 @@ NUM_CORE = cpu_count()
 SAVE_BUCKET_INTERVAL = 1
 print("CPU counts：%d" % NUM_CORE)
 
+# env = grid2op.make("l2rpn_icaps_2021_large")
+# nm_env_train, nm_env_val = env.train_val_split_random(pct_val=10.0)
+
 env_train = grid2op.make("l2rpn_icaps_2021_large_train", backend=LightSimBackend(), reward_class=RedispReward)
 env_val = grid2op.make("l2rpn_icaps_2021_large_val", backend=LightSimBackend(), reward_class=RedispReward)
 agent = Trainer(env_train, env_train.action_space)
@@ -656,21 +714,18 @@ else:
         below_rho_threshold = True
         while not done:
             act, action_index = agent.act(env, obs, reward, False, below_rho_threshold, done)
-            if timestep == 5991:
-                act = agent.do_nothing_action
-            print(act)
             obs, reward, done, info = env.step(act)
             below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
             under_attack = info["opponent_attack_line"] is not None and len(info["opponent_attack_line"]) > 0
             timestep = env.nb_time_step
-            if under_attack or not below_rho_threshold:
-                print(">>>>>>>")
-                print("Timestep:", timestep)
-                print("obs.rho.max():", obs.rho.max())
-                if under_attack:
-                    print("UNDER ATTACK:")
-                    print(info["opponent_attack_line"])
-                print(obs.topo_vect)
+            # if under_attack or not below_rho_threshold:
+            # print(">>>>>>>")
+            # print("Timestep:", timestep)
+            # print("obs.rho.max():", obs.rho.max())
+            # if under_attack:
+            #    print("UNDER ATTACK:")
+            #    print(info["opponent_attack_line"])
+            # print(obs.topo_vect)
             if done:
                 survived_timesteps.append(timestep)
                 print(info)
