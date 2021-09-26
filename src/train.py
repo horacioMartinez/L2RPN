@@ -617,8 +617,8 @@ def run_training_batch(agent, starting_env):
     agent.buckets.finalize_learning_batch(bucket_hashes, action_indexes)
 
 
-if len(sys.argv) < 3:
-    print("Not enough arguments. USAGE: <Eval/Train/EvalInTraining> <NumScenarios> <chronics_seed>")
+if len(sys.argv) < 4:
+    print("Not enough arguments. USAGE: <Eval/Train/EvalInTraining> <NumScenarios> <#cpus> <id_cpu>")
     exit()
 
 assert str(sys.argv[1]) == "Train" or str(sys.argv[1]) == "Eval" or str(sys.argv[1]) == "EvalInTraining"
@@ -626,7 +626,11 @@ TRAIN = str(sys.argv[1]) == "Train"
 EVAL_TRAINING_DATA = str(sys.argv[1]) == "EvalInTraining"
 
 number_of_scenarios = int(sys.argv[2])
-SEED = int(sys.argv[3])
+NUMBER_OF_CPUS = int(sys.argv[3])
+CPU_ID = int(sys.argv[4])
+
+assert CPU_ID < NUMBER_OF_CPUS
+
 
 random.seed(0)
 
@@ -635,6 +639,8 @@ start_time = time.time()
 MAX_BATCH_ITERATIONS = 1000000
 NUM_CORE = cpu_count()
 SAVE_BUCKET_INTERVAL = 1
+#SEED = CPU_ID
+SEED = 0
 print("CPU counts：%d" % NUM_CORE)
 
 # env = grid2op.make("l2rpn_icaps_2021_large")
@@ -649,9 +655,14 @@ env_val.chronics_handler.shuffle()
 env_train.chronics_handler.seed(SEED)
 env_train.chronics_handler.shuffle()
 
+episode_true_index = 0
 if TRAIN:
     print("Start evaluating in training data")
     for i in range(number_of_scenarios):
+        while episode_true_index < i * NUMBER_OF_CPUS + CPU_ID:
+            env_train.reset()
+            episode_true_index += 1
+
         print("Running episode:", i, "(", env_train.chronics_handler.get_name(), ")")
         env_seed = i + SEED
         agent_seed = i + SEED
@@ -691,7 +702,7 @@ if TRAIN:
         print("Memory used (GB):", GBmemory)
         if GBmemory > MAX_MEMORY_GB:
             break
-        if i % SAVE_BUCKET_INTERVAL == 0 and TRAIN:
+        if i % SAVE_BUCKET_INTERVAL == 0:
             agent.buckets.save_buckets_to_disk()
 else:
     episode_names = []
@@ -702,6 +713,10 @@ else:
         env = env_val
     print("Total number of chronics:", len(env.chronics_handler.chronics_used))
     for i in range(number_of_scenarios):
+        while episode_true_index < i * NUMBER_OF_CPUS + CPU_ID:
+            env.reset()
+            episode_true_index += 1
+
         print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Running episode:", i, "(", env.chronics_handler.get_name(), ")")
         episode_names.append(env.chronics_handler.get_name())
         env_seed = i + SEED
