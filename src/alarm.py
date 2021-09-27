@@ -69,20 +69,28 @@ class Alarm:
         self.triggered_alarms = []
 
     def is_legal(self, timestep):
+        assert timestep > 0
         assert timestep >= self.last_processed_timestep
-        new_budget = self.budget + (timestep - self.last_processed_timestep) * self.budget_per_ts
+        new_budget = self.budget + (((timestep - 1) - self.last_processed_timestep) * self.budget_per_ts)
+        if new_budget > self.max_budget:
+            new_budget = self.max_budget
+
         if new_budget < self.alarm_cost:
             return False
         return True
 
     def trigger_alarm(self, timestep, alarm_action):
+        # NOTE: In the timestep we trigger the alarm we are not incrementing our budget. (grid2op bug?)
         assert self.is_legal(timestep)
-        self.budget = self.budget + ((timestep - self.last_processed_timestep) * self.budget_per_ts)
+        self.budget = self.budget + (((timestep - 1) - self.last_processed_timestep) * self.budget_per_ts)
         if self.budget > self.max_budget:
             self.budget = self.max_budget
         self.last_processed_timestep = timestep
-        self.budget -= self.alarm_cost
+
+        self.budget = self.budget - self.alarm_cost
         self.triggered_alarms.append((timestep, copy.deepcopy(alarm_action)))
+        if self.budget < 0:  # Can happen due to rounding error
+            self.budget = 0
         assert self.budget >= 0
 
     def _tmp_score_time(self, step_alarm, step_game_over):
@@ -121,7 +129,6 @@ class Alarm:
         zones_these_lines = set()
         zone_for_each_lines = self.env.alarms_lines_area
         for line_id in lines_disconnected_first:
-            print("line_id:", line_id)
             line_name = self.env.name_line[line_id]
             for zone_name in zone_for_each_lines[line_name]:
                 zones_these_lines.add(zone_name)

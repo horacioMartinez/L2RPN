@@ -1,9 +1,11 @@
 from mmap import ALLOCATIONGRANULARITY
+import math
 import sys
 import random
 import resource
 from random import randrange, seed
 from threading import current_thread
+from grid2op import Observation
 from lightsim2grid import LightSimBackend
 import os
 import time
@@ -292,10 +294,11 @@ class Trainer(BaseAgent):
 
         alarm_action = None
         alarm_is_legal = observation.attention_budget[0] >= 1.0
-        alarm_doesnt_overlap = observation.time_since_last_alarm[0] == -1 or observation.time_since_last_alarm[0] > 5
+        alarm_doesnt_overlap = (
+            True  # observation.time_since_last_alarm[0] == -1 or observation.time_since_last_alarm[0] > 5
+        )
         # We could avoid triggering alarm if we already did before the max/min timesteps. What happens if two alarms are triggered ???
         if alarm_is_legal and alarm_doesnt_overlap and observation.rho.max() > ALARM_RHO_THRESHOLD:
-            print("LEGAL!")
             alarm_action = self.process_alarm_action(env, observation)
 
         o, _, d, info_simulate = observation.simulate(self.do_nothing_action)
@@ -742,6 +745,7 @@ else:
                 survived_timesteps.append(timestep)
                 print(info)
 
+            assert not obs.is_alarm_illegal[0]  # Only true if last alarm was illegal
             # ALARM >
             if done:
                 disc_lines_in_cascade = list(np.where(info["disc_lines"] == 0)[0])
@@ -751,6 +755,8 @@ else:
                     disc_lines_before_cascade.pop(0)
             if np.any(act.raise_alarm):
                 alarm.trigger_alarm(timestep, act.raise_alarm)
+                if not done:
+                    assert math.isclose(alarm.budget, obs.attention_budget, rel_tol=1e-3)
             # < ALARM
 
         # ALARM >
