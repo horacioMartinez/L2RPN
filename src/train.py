@@ -16,6 +16,7 @@ from grid2op.Reward import RedispReward
 from grid2op.Agent import BaseAgent
 from scipy.optimize.optimize import bracket
 from buckets import Buckets
+from alarm import Alarm
 
 # NOTE: Final agent should have same thresholds !
 ALARM_RHO_THRESHOLD = 1.0
@@ -76,8 +77,8 @@ class Trainer(BaseAgent):
         self.bus_actions1255 = np.load(os.path.join("./data/", bus_actions1255_name))
         self.bus_actions_62_146_1255 = np.concatenate((self.bus_actions_62_146, self.bus_actions1255), axis=0)
         self.redispatch_actions = np.load(os.path.join("./data/", redispatch_actions_name))
-        self.all_actions = np.concatenate((self.do_nothing_action_vect, self.bus_actions62), axis=0)
-        print("bus_actions_62 actions SIN BUCKETS")
+        self.all_actions = np.concatenate((self.do_nothing_action_vect, self.bus_actions_62_146), axis=0)
+        print("bus_actions_62_146 actions SIN BUCKETS")
 
         buckets_save_file = "./data/buckets-" + str(len(self.all_actions)) + ".pkl"
         print("buckets_save_file:", buckets_save_file)
@@ -223,23 +224,14 @@ class Trainer(BaseAgent):
 
         alarms_lines_area = env.alarms_lines_area
         alarms_area_names = env.alarms_area_names
-
-        # extract the zones they belong too
-        zones_these_lines = set()
         zone_for_each_lines = alarms_lines_area
-        lines_overloaded = np.where(observation.rho >= 1)[0].tolist()  # obs.rho>0.6
-        # print(lines_overloaded)
-        for line_id in lines_overloaded:
-            line_name = observation.name_line[line_id]
-            for zone_name in zone_for_each_lines[line_name]:
-                zones_these_lines.add(zone_name)
-
-        zones_these_lines = list(zones_these_lines)
-        zones_ids_these_lines = [alarms_area_names.index(zone) for zone in zones_these_lines]
-
-        zones_alert = zones_ids_these_lines
-        # print(zones_alert)
-        alarm_action = self.action_space({"raise_alarm": zones_alert})
+        line_most_overloaded = np.argmax(observation.rho)
+        line_name = observation.name_line[line_most_overloaded]
+        # Some lines are in more than one area, which one to chose ?
+        zone_name = zone_for_each_lines[line_name][0]
+        #'east' = 0, 'middle' = 1, 'west' = 2
+        zone_index = [alarms_area_names.index(zone_name)]
+        alarm_action = self.action_space({"raise_alarm": zone_index})
         return alarm_action
 
     def combine_actions(self, actionA, actionB, observation):
@@ -367,7 +359,6 @@ class Trainer(BaseAgent):
                 selected_action = action
 
         start_time = time.time()
-        print(self.combine_actions(alarm_action, selected_action, observation))
         return self.combine_actions(alarm_action, selected_action, observation), -1
 
     def get_action_from_index(self, observation, action_index):
@@ -639,7 +630,7 @@ start_time = time.time()
 MAX_BATCH_ITERATIONS = 1000000
 NUM_CORE = cpu_count()
 SAVE_BUCKET_INTERVAL = 1
-#SEED = CPU_ID
+# SEED = CPU_ID
 SEED = 0
 print("CPU counts：%d" % NUM_CORE)
 
@@ -724,9 +715,15 @@ else:
         env.seed(env_seed)
         obs = env.reset()
         done = False
+        info = None
         timestep = 0
         reward = 0
         below_rho_threshold = True
+        # ALARM >
+        alarm = Alarm(env)
+        disc_lines_before_cascade = []
+        disc_lines_in_cascade = []
+        # < ALARM
         while not done:
             act, action_index = agent.act(env, obs, reward, False, below_rho_threshold, done)
             obs, reward, done, info = env.step(act)
@@ -744,6 +741,25 @@ else:
             if done:
                 survived_timesteps.append(timestep)
                 print(info)
+
+            # ALARM >
+            if done:
+                disc_lines_in_cascade = list(np.where(info["disc_lines"] == 0)[0])
+            else:
+                disc_lines_before_cascade.append(list(np.where(info["disc_lines"] == 0)[0]))
+                if (len(disc_lines_before_cascade)) > 4:
+                    disc_lines_before_cascade.pop(0)
+            if np.any(act.raise_alarm):
+                alarm.trigger_alarm(timestep, act.raise_alarm)
+            # < ALARM
+
+        # ALARM >
+        we_won = len(info["exception"]) == 0
+        if we_won:
+            assert timestep == 8062
+        alarm_score = alarm.compute_score(timestep, we_won, disc_lines_before_cascade, disc_lines_in_cascade)
+        print("ALARM SCORE:", alarm_score)
+        # < ALARM
         print("Completed episode", i, ",number of timesteps:", timestep)
     print("---------------------------")
     print("Episodes:", episode_names)
