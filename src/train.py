@@ -707,6 +707,9 @@ else:
         env = env_val
     print("Total number of chronics:", len(env.chronics_handler.chronics_used))
     for i in range(number_of_scenarios):
+        # if i < 57:
+        # env.reset()
+        #            continue
         while episode_true_index < i * NUMBER_OF_CPUS + CPU_ID:
             env.reset()
             episode_true_index += 1
@@ -753,10 +756,12 @@ else:
                 disc_lines_before_cascade.append(list(np.where(info["disc_lines"] == 0)[0]))
                 if (len(disc_lines_before_cascade)) > 4:
                     disc_lines_before_cascade.pop(0)
+            alarm_action = None
             if np.any(act.raise_alarm):
-                alarm.trigger_alarm(timestep, act.raise_alarm)
-                if not done:
-                    assert math.isclose(alarm.budget, obs.attention_budget, rel_tol=1e-3)
+                alarm_action = act.raise_alarm
+            alarm.update_timestep(timestep, alarm_action)
+            if not done:
+                assert math.isclose(alarm.budget, obs.attention_budget, rel_tol=1e-3)
             # < ALARM
 
         # ALARM >

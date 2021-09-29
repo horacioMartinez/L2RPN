@@ -2,6 +2,7 @@
 
 # /home/horacio/git/competition/Grid2Op/grid2op/Reward/AlarmReward.py
 # /home/horacio/git/competition/Grid2Op/grid2op/Reward/_AlarmScore.py
+# /home/horacio/git/competition/Grid2Op/grid2op/operator_attention/attention_budget.py
 
 import numpy as np
 import copy
@@ -57,41 +58,59 @@ class Alarm:
                 "change the reward class with `grid2op.make(..., reward_class=AnyOtherReward)`"
             )
 
-        self.mult_for_right_zone = 2
+        self.mult_for_right_zone = 1.5
 
         self.window_disconnection = 4  # timesteps back to search for disconnected lines
         self.last_processed_timestep = 0
         starting_budget = 2.0
         self.budget = starting_budget
         self.alarm_cost = 1.0
-        self.budget_per_ts = 1.0 / (12 * 16)
+        self.budget_per_ts = 1.0 / (12.0 * 16)
         self.max_budget = 3.0
         self.triggered_alarms = []
 
-    def is_legal(self, timestep):
+    def update_timestep(self, timestep, alarm_action):
         assert timestep > 0
-        assert timestep >= self.last_processed_timestep
-        new_budget = self.budget + (((timestep - 1) - self.last_processed_timestep) * self.budget_per_ts)
-        if new_budget > self.max_budget:
-            new_budget = self.max_budget
-
-        if new_budget < self.alarm_cost:
-            return False
-        return True
-
-    def trigger_alarm(self, timestep, alarm_action):
-        # NOTE: In the timestep we trigger the alarm we are not incrementing our budget. (grid2op bug?)
-        assert self.is_legal(timestep)
-        self.budget = self.budget + (((timestep - 1) - self.last_processed_timestep) * self.budget_per_ts)
-        if self.budget > self.max_budget:
-            self.budget = self.max_budget
+        assert timestep == self.last_processed_timestep + 1
         self.last_processed_timestep = timestep
+        if alarm_action is None:
+            self.budget = min(self.max_budget, self.budget_per_ts + self.budget)
+        else:
+            is_legal = self.budget >= self.alarm_cost
+            if not is_legal:  # fp error
+                print("self.budget:", self.budget)
+                print("self.alarm_cost:", self.alarm_cost)
+                assert abs(self.budget - self.alarm_cost) <= 0.001
+            self.triggered_alarms.append((timestep, copy.deepcopy(alarm_action)))
+            self.budget = self.budget - self.alarm_cost
+            if self.budget < 0:
+                self.budget = 0
 
-        self.budget = self.budget - self.alarm_cost
-        self.triggered_alarms.append((timestep, copy.deepcopy(alarm_action)))
-        if self.budget < 0:  # Can happen due to rounding error
-            self.budget = 0
-        assert self.budget >= 0
+    # def is_legal(self, timestep):
+    #     assert timestep > 0
+    #     assert timestep >= self.last_processed_timestep
+    #     new_budget = self.budget + (((timestep - 1) - self.last_processed_timestep) * self.budget_per_ts)
+    #     if new_budget > self.max_budget:
+    #         new_budget = self.max_budget
+
+    #     print("new_budget:", new_budget - 1.0)
+    #     if new_budget < self.alarm_cost:
+    #         return False
+    #     return True
+
+    # def trigger_alarm(self, timestep, alarm_action):
+    #     # NOTE: In the timestep we trigger the alarm we are not incrementing our budget. (grid2op bug?)
+    #     assert self.is_legal(timestep)
+    #     self.budget = self.budget + (((timestep - 1) - self.last_processed_timestep) * self.budget_per_ts)
+    #     if self.budget > self.max_budget:
+    #         self.budget = self.max_budget
+    #     self.last_processed_timestep = timestep
+
+    #     self.budget = self.budget - self.alarm_cost
+    #     self.triggered_alarms.append((timestep, copy.deepcopy(alarm_action)))
+    #     if self.budget < 0:  # Can happen due to rounding error
+    #         self.budget = 0
+    #     assert self.budget >= 0
 
     def _tmp_score_time(self, step_alarm, step_game_over):
         """
@@ -160,15 +179,15 @@ class Alarm:
         step_game_over = timestep
         if won:
             assert timestep == 8062
-            return self.reward_max
+            return self.reward_max * 100
 
         if len(self.triggered_alarms) == 0:
             # no alarm have been sent, so it's the minimum
-            return self.reward_min
+            return self.reward_min * 100
 
         if len(disconnected_lines_at_game_over) == 0:
             # game over is not caused by the tripping of a powerline
-            return self.reward_min
+            return self.reward_min * 100
 
         assert len(disconnected_lines_before_game_over) <= self.window_disconnection
         combined_disconnected_lines_before_game_over = np.concatenate(disconnected_lines_before_game_over).astype(int)
@@ -185,4 +204,4 @@ class Alarm:
             )
             if score > best_score:
                 best_score = score
-        return best_score
+        return best_score * 100

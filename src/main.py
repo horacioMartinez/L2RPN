@@ -1,6 +1,8 @@
 import sys
+import math
 import time
 import grid2op
+import numpy as np
 from grid2op.Agent import DoNothing
 from l2rpn_baselines.DoubleDuelingDQN import train
 from l2rpn_baselines.DoubleDuelingDQN import evaluate
@@ -21,7 +23,7 @@ from grid2op.Episode import EpisodeReplay
 
 from submission.my_agent import make_agent as make_agent_submission
 from my_agent import make_agent
-
+from alarm import Alarm
 
 # env = grid2op.make(track, backend=BACKEND(), reward_class=RedispReward)
 start_time = time.time()
@@ -46,6 +48,47 @@ def scoreAgent(make_agent, competition, number_of_scenarios, saveGif):
         agent_seeds=[i for i in range(number_of_scenarios)],
         verbose=2,
     )
+    # # TEST ALARM SCORE >
+    # for i in range(number_of_scenarios):
+    #     env.seed(i)
+    #     obs = env.reset()
+    #     done = False
+    #     info = None
+    #     timestep = 0
+    #     reward = 0
+    #     below_rho_threshold = True
+    #     alarm = Alarm(env)
+    #     disc_lines_before_cascade = []
+    #     disc_lines_in_cascade = []
+    #     while not done:
+    #         # def act(self, observation, reward, done=False):
+
+    #         act = agent.act(obs, reward, False)
+    #         obs, reward, done, info = env.step(act)
+    #         timestep = env.nb_time_step
+    #         if done:
+    #             print(info)
+    #         assert not obs.is_alarm_illegal[0]  # Only true if last alarm was illegal
+    #         if done:
+    #             disc_lines_in_cascade = list(np.where(info["disc_lines"] == 0)[0])
+    #         else:
+    #             disc_lines_before_cascade.append(list(np.where(info["disc_lines"] == 0)[0]))
+    #             if (len(disc_lines_before_cascade)) > 4:
+    #                 disc_lines_before_cascade.pop(0)
+    #         alarm_action = None
+    #         if np.any(act.raise_alarm):
+    #             alarm_action = act.raise_alarm
+    #         alarm.update_timestep(timestep, alarm_action)
+    #         # if not done:
+    #         # assert math.isclose(alarm.budget, obs.attention_budget, rel_tol=1e-3)
+    #     we_won = len(info["exception"]) == 0
+    #     if we_won:
+    #         assert timestep == 8062
+    #     alarm_score = alarm.compute_score(timestep, we_won, disc_lines_before_cascade, disc_lines_in_cascade)
+    #     print("ALARM SCORE:", alarm_score)
+    #     print("Completed episode", i, ",number of timesteps:", timestep)
+    # exit(0)
+    # # < TEST ALARM SCORE
     print("STARTING THE EVALUATION")
     path_save = "/home/horacio/git/competition/L2RPN/src/evaluation-output-data/" + agent.name
     result = my_score.get(agent, path_save, nb_process=1)
