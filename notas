@@ -468,3 +468,47 @@ Num timesteps 50  survived timesteps: [4264, 5098, 8062, 133, 2500, 8062, 177, 5
 -> Average survived timesteps: 2345.42
 Memory used (GB): 0.7896156311035156
 Environment used: env_train Seed used: 1
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+Tiempo de guardar info de episodes solo guardando rhos:
+
+Episodes: ['Scenario_april_210', 'Scenario_december_127', 'Scenario_october_189', 'Scenario_july_302', 'Scenario_january_210', 'Scenario_april_023', 'Scenario_march_138', 'Scenario_july_111', 'Scenario_august_094', 'Scenario_august_225']
+Num timesteps 10  survived timesteps: [822, 1634, 1936, 4626, 1021, 3097, 3131, 8062, 8062, 8062]
+-> Average survived timesteps: 4045.3
+Memory used (GB): 0.3209800720214844
+Environment used: env_train Seed used: 0
+FINISH!!
+
+python3.9 store_episode_data.py EvalInTraining 10 1 0  2397,15s user 1,89s system 99% cpu 40:06,78 total
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+Scores al correr $ test_submission:
+
+Your scores are :
+(remember these score are not at all an indication of what will be used in codalab, as the data it is tested on are really different):"
+
+                 0             1
+0            score     32.782531
+1         duration   8716.180912
+2  total_operation     45.475044
+3  total_attention      3.166667
+
+------------------------------------
+         Extra Informations         
+------------------------------------
+Don't hesitate to have a look at:
+        utils/last_submission_results/results.html
+        utils/last_submission_results/*.gif
+To have high level information about your agent.
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+Eval con agente de ahora con alarma mala con 300 episodios:
+
+$ python3.9 train.py Eval 280 1 0
+
+(COMPLETAR)
