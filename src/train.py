@@ -1,4 +1,7 @@
+from enum import Flag
 from mmap import ALLOCATIONGRANULARITY
+import copy
+import pickle
 import math
 import sys
 import random
@@ -611,6 +614,105 @@ def run_training_batch(agent, starting_env):
     agent.buckets.finalize_learning_batch(bucket_hashes, action_indexes)
 
 
+# For each episode we store its name. For each timestep we store the timestep number and the features:
+# Time of day, day of the week, week of the month?, month of the year?.
+# Rhos of each line.
+# Rhos of simulations of the 62 + 142 actions !!! << !!!!
+# Bus of each element (-1 if disconnected)
+# Loads/Generators
+# Should timestep be a feature ???? It makes sense that it is one, because we should trigger alarms more agressevily if few remain!.
+
+
+EPISODE_INFORMATION_STORAGE_THRESHOLD = 0.8
+episode_data = None
+disc_lines_before_cascade = []
+disc_lines_in_cascade = []
+
+
+def extract_timestep_features_for_alarm(
+    episode_seed, env, obs, info, done, timestep, disc_lines_before_cascade, disc_lines_in_cascade
+):
+    if done:
+        print("DONE!")
+    info = {}
+    info["rho"] = obs.rho
+    return info
+
+
+def save_episode_data_to_disk(name, episode_seed):
+    save_name = "data/episodes_data/episode_data-" + name + "-" + str(episode_seed) + ".pkl"
+    if os.path.isfile(save_name):
+        print("File already exists!!")
+        assert False
+    print("Saving episodes data to file:", save_name)
+    with open(save_name, "wb") as f:
+        pickle.dump(episode_data, f, pickle.HIGHEST_PROTOCOL)
+    print("Saved episodes data to", save_name)
+
+
+def store_information_for_alarm(
+    episode_seed, env, obs, info, done, timestep, disc_lines_before_cascade, disc_lines_in_cascade
+):
+    global episode_data
+    episode_name = env.chronics_handler.get_name()
+    if episode_data == None:
+        print("BEGIN Storing information for episode: ", episode_name)
+        assert timestep == 1
+        episode_data = []
+        disc_lines_before_cascade = []
+        disc_lines_in_cascade = []
+        return
+    assert timestep > 1
+
+    if done:
+        disc_lines_in_cascade = list(np.where(info["disc_lines"] == 0)[0])
+    else:
+        disc_lines_before_cascade.append(list(np.where(info["disc_lines"] == 0)[0]))
+        if (len(disc_lines_before_cascade)) > 4:
+            disc_lines_before_cascade.pop(0)
+
+    if not done and obs.rho.max() < EPISODE_INFORMATION_STORAGE_THRESHOLD:
+        return
+    if done:
+        features = []
+    else:
+        features = extract_timestep_features_for_alarm(
+            episode_seed, env, obs, info, done, timestep, disc_lines_before_cascade, disc_lines_in_cascade
+        )
+
+    we_won = False
+    if done:
+        we_won = len(info["exception"]) == 0
+        if we_won:
+            assert timestep == 8062
+
+    disc_lines_before_cascade_copy = []
+    disc_lines_in_cascade_copy = []
+    if done and not we_won:
+        disc_lines_before_cascade_copy = copy.deepcopy(disc_lines_before_cascade)
+        disc_lines_in_cascade_copy = copy.deepcopy(disc_lines_in_cascade)
+
+    if done:
+        if we_won:
+            timestep_information = {"timestep": timestep, "done": done, "we_won": we_won}
+        else:
+            timestep_information = {
+                "timestep": timestep,
+                "done": done,
+                "we_won": we_won,
+                "disc_lines_before_cascade": disc_lines_before_cascade_copy,
+                "disc_lines_in_cascade": disc_lines_in_cascade_copy,
+            }
+    else:
+        timestep_information = {"timestep": timestep, "features": features, "done": done}
+
+    episode_data.append(timestep_information)
+    if done:
+        save_episode_data_to_disk(episode_name, episode_seed)
+        episode_data = None
+        print("DONE Storing episode:", episode_name)
+
+
 if len(sys.argv) < 4:
     print("Not enough arguments. USAGE: <Eval/Train/EvalInTraining> <NumScenarios> <#cpus> <id_cpu>")
     exit()
@@ -726,9 +828,9 @@ else:
         reward = 0
         below_rho_threshold = True
         # ALARM >
-        alarm = Alarm(env)
-        disc_lines_before_cascade = []
-        disc_lines_in_cascade = []
+        # alarm = Alarm(env)
+        # disc_lines_before_cascade = []
+        # disc_lines_in_cascade = []
         # < ALARM
         while not done:
             act, action_index = agent.act(env, obs, reward, False, below_rho_threshold, done)
@@ -736,6 +838,7 @@ else:
             below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
             under_attack = info["opponent_attack_line"] is not None and len(info["opponent_attack_line"]) > 0
             timestep = env.nb_time_step
+
             # if under_attack or not below_rho_threshold:
             # print(">>>>>>>")
             # print("Timestep:", timestep)
@@ -750,26 +853,29 @@ else:
 
             assert not obs.is_alarm_illegal[0]  # Only true if last alarm was illegal
             # ALARM >
-            if done:
-                disc_lines_in_cascade = list(np.where(info["disc_lines"] == 0)[0])
-            else:
-                disc_lines_before_cascade.append(list(np.where(info["disc_lines"] == 0)[0]))
-                if (len(disc_lines_before_cascade)) > 4:
-                    disc_lines_before_cascade.pop(0)
-            alarm_action = None
-            if np.any(act.raise_alarm):
-                alarm_action = act.raise_alarm
-            alarm.update_timestep(timestep, alarm_action)
-            if not done:
-                assert math.isclose(alarm.budget, obs.attention_budget, rel_tol=1e-3)
+            # if done:
+            # disc_lines_in_cascade = list(np.where(info["disc_lines"] == 0)[0])
+            # else:
+            # disc_lines_before_cascade.append(list(np.where(info["disc_lines"] == 0)[0]))
+            # if (len(disc_lines_before_cascade)) > 4:
+            # disc_lines_before_cascade.pop(0)
+            # alarm_action = None
+            # if np.any(act.raise_alarm):
+            # alarm_action = act.raise_alarm
+            # alarm.update_timestep(timestep, alarm_action)
+            # if not done:
+            # assert math.isclose(alarm.budget, obs.attention_budget, rel_tol=1e-3)
             # < ALARM
+            store_information_for_alarm(
+                env_seed, env, obs, info, done, timestep, disc_lines_before_cascade, disc_lines_in_cascade
+            )
 
         # ALARM >
-        we_won = len(info["exception"]) == 0
-        if we_won:
-            assert timestep == 8062
-        alarm_score = alarm.compute_score(timestep, we_won, disc_lines_before_cascade, disc_lines_in_cascade)
-        print("ALARM SCORE:", alarm_score)
+        # we_won = len(info["exception"]) == 0
+        # if we_won:
+        # assert timestep == 8062
+        # alarm_score = alarm.compute_score(timestep, we_won, disc_lines_before_cascade, disc_lines_in_cascade)
+        # print("ALARM SCORE:", alarm_score)
         # < ALARM
         print("Completed episode", i, ",number of timesteps:", timestep)
     print("---------------------------")
