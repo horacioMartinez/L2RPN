@@ -9,37 +9,6 @@ import copy
 
 
 class Alarm:
-    """
-    This reward is based on the "alarm feature" where the agent is asked to send information about potential issue
-    on the grid.
-
-    On this case, when the environment is in a "game over" state (eg it's the end) then the reward is computed
-    the following way:
-
-    - if the environment has been successfully manage until the end of the chronics, then 1.0 is returned
-    - if no alarm has been raised, then -1.0 is return
-
-
-    Examples
-    ---------
-    You can use this reward in any environment with:
-
-    .. code-block:
-
-        import grid2op
-        from grid2op.Reward import AlarmReward
-
-        # then you create your environment with it:
-        NAME_OF_THE_ENVIRONMENT = "rte_case14_realistic"
-        env = grid2op.make(NAME_OF_THE_ENVIRONMENT,reward_class=AlarmReward)
-        # and do a step with a "do nothing" action
-        obs = env.reset()
-        obs, reward, done, info = env.step(env.action_space())
-        # the reward is computed with the AlarmReward class
-
-
-    """
-
     def __init__(self, env):
         self.env = env
 
@@ -135,6 +104,12 @@ class Alarm:
             polynom = (dist_to_best - self.window_size) * (dist_to_best + self.window_size)
             # scale it such that it is 1 for dist_to_best == 0 (ie step_game_over - step_alarm == self.best_time)
             res = -polynom / self.window_size ** 2
+        # print("------")
+        # print("step_game_over:", step_game_over)
+        # print("step_alarm:", step_alarm)
+        # print("self.best_time:", self.best_time)
+        # print("self.window_size:", self.window_size)
+        # print("res:", res)
         return res
 
     def _mult_for_zone(self, alarm, lines_disconnected_first):
@@ -182,10 +157,12 @@ class Alarm:
             return self.reward_max * 100
 
         if len(self.triggered_alarms) == 0:
+            print("XXXXXXXXXXXXX")
             # no alarm have been sent, so it's the minimum
             return self.reward_min * 100
 
         if len(disconnected_lines_at_game_over) == 0:
+            print("UUUUUUUUUUU")
             # game over is not caused by the tripping of a powerline
             return self.reward_min * 100
 

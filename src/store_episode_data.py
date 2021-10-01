@@ -330,7 +330,7 @@ class Trainer(BaseAgent):
         return selected_action, actions_rho
 
 
-EPISODE_INFORMATION_STORAGE_THRESHOLD = 0.9
+EPISODE_INFORMATION_STORAGE_THRESHOLD = 0.8
 episode_data = None
 disc_lines_before_cascade = []
 disc_lines_in_cascade = []
