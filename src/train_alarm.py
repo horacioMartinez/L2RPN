@@ -22,7 +22,10 @@ from grid2op.Agent import BaseAgent
 from alarm import Alarm
 
 
-def naive_alarm_action(env, rho):
+def naive_alarm_action(timestep, last_alarm_trigger_timestep, env, rho):
+    assert timestep >= last_alarm_trigger_timestep
+    if timestep - last_alarm_trigger_timestep < 7:
+        return None
     alarms_lines_area = env.alarms_lines_area
     alarms_area_names = env.alarms_area_names
     zone_for_each_lines = alarms_lines_area
@@ -35,6 +38,12 @@ def naive_alarm_action(env, rho):
     alarm_action = env.action_space({"raise_alarm": zone_index})
     return alarm_action
 
+
+if len(sys.argv) < 1:
+    print("Not enough arguments. USAGE: <NumScenarios>")
+    exit()
+
+number_of_scenarios = int(sys.argv[1])
 
 random.seed(0)
 MAX_MEMORY_GB = 32
@@ -54,21 +63,41 @@ env.seed(SEED)
 # obs = env.reset()
 env.reset()
 
-EPISODES_DATA_PATH = "data/episodes_data_TEMP"
+EPISODES_DATA_PATH = "data/episodes_data_rho_0.8"
 
 episodes_data_files = [f for f in listdir(EPISODES_DATA_PATH) if isfile(join(EPISODES_DATA_PATH, f))]
 random.shuffle(episodes_data_files)
 
 episodes_data = []
+aux = 0
 for episodes_data_file in episodes_data_files:
+    if aux == number_of_scenarios:
+        break
     with open(EPISODES_DATA_PATH + "/" + episodes_data_file, "rb") as f:
         episodes_data.append(pickle.load(f))
+    aux += 1
 
 episode_data_index = 0
 alarm_scores = []
 episode_names = []
 number_of_alarm_failures_due_to_action_leading_to_game_over = 0
 number_of_alarm_failures_due_to_no_info_in_previous_timesteps = 0
+
+# Remove scenarios where our actions lead to game over. (Theres nothing we can do about this !):
+filtered_array = []
+for i in range(0, len(episodes_data)):
+    last_timestep_data = episodes_data[i][len(episodes_data[i]) - 1]
+    assert last_timestep_data["done"]
+    we_won = last_timestep_data["we_won"]
+    if not we_won:
+        disc_lines_in_cascade = last_timestep_data["disc_lines_in_cascade"]
+        if len(disc_lines_in_cascade) == 0:
+            number_of_alarm_failures_due_to_action_leading_to_game_over += 1
+            continue
+    filtered_array.append(episodes_data[i])
+print("Filtered out", len(episodes_data) - len(filtered_array), "due to our action leading to game over")
+episodes_data = filtered_array
+#
 
 for episode_data in episodes_data:
     episode_name = episodes_data_files[episode_data_index].split("-", 1)[-1].split(".", 1)[0]
@@ -83,6 +112,7 @@ for episode_data in episodes_data:
     data_index = 0
     alarm = Alarm(env)
     episode_data_timesteps_record = []
+    last_alarm_trigger_timestep = 0
     while not done:
         timestep += 1
         episode_data_timestep = episode_data[data_index]["timestep"]
@@ -106,7 +136,7 @@ for episode_data in episodes_data:
                 if len(disc_lines_in_cascade) == 0:
                     assert alarm_score == -200
                     number_of_alarm_failures_due_to_action_leading_to_game_over += 1
-                if episode_data_timestep - 7 not in episode_data_timesteps_record:
+                elif episode_data_timestep - 7 not in episode_data_timesteps_record:
                     number_of_alarm_failures_due_to_no_info_in_previous_timesteps += 1
 
             print("Episode:", episode_name, " ALARM SCORE:", alarm_score)
@@ -148,13 +178,15 @@ for episode_data in episodes_data:
             ]
             # alarm_action = None
             # alarm_action = valid_actions[0]
-            alarm_action = naive_alarm_action(env, feature_rho)
+            alarm_action = naive_alarm_action(timestep, last_alarm_trigger_timestep, env, feature_rho)
             if alarm_action != None:
                 raise_alarm_vect = alarm_action.raise_alarm
+                last_alarm_trigger_timestep = timestep
 
         alarm.update_timestep(timestep, raise_alarm_vect)
     print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< DONE:", alarm_scores[len(alarm_scores) - 1])
     episode_data_index += 1
+
 
 print("Num episodes:", len(episode_names))
 print("Episodes:", episode_names)
