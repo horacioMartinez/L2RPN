@@ -83,6 +83,19 @@ episode_names = []
 number_of_alarm_failures_due_to_action_leading_to_game_over = 0
 number_of_alarm_failures_due_to_no_info_in_previous_timesteps = 0
 
+# Remove scenarios where we win
+filtered_array = []
+for i in range(0, len(episodes_data)):
+    last_timestep_data = episodes_data[i][len(episodes_data[i]) - 1]
+    assert last_timestep_data["done"]
+    we_won = last_timestep_data["we_won"]
+    if we_won:
+        continue
+    filtered_array.append(episodes_data[i])
+print("Filtered out", len(episodes_data) - len(filtered_array), "because we won")
+episodes_data = filtered_array
+#
+
 # Remove scenarios where our actions lead to game over. (Theres nothing we can do about this !):
 filtered_array = []
 for i in range(0, len(episodes_data)):
