@@ -22,8 +22,14 @@ from grid2op.Agent import BaseAgent
 from alarm import Alarm
 
 
+def one_alarm_action(timestep, last_alarm_trigger_timestep, env, rho):
+    assert timestep >= last_alarm_trigger_timestep
+
+
 def naive_alarm_action(timestep, last_alarm_trigger_timestep, env, rho):
     assert timestep >= last_alarm_trigger_timestep
+    if rho.max() < 1.1:
+        return None
     if timestep - last_alarm_trigger_timestep < 7:
         return None
     alarms_lines_area = env.alarms_lines_area

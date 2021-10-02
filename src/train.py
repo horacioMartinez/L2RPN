@@ -711,6 +711,8 @@ else:
     else:
         env = env_val
     print("Total number of chronics:", len(env.chronics_handler.chronics_used))
+    under_attack_count = 0
+    not_under_attack_count = 0
     for i in range(number_of_scenarios):
         # if i < 57:
         # env.reset()
@@ -766,6 +768,12 @@ else:
             #    print(info["opponent_attack_line"])
             # print(obs.topo_vect)
             if done:
+                if timestep < 8060:
+                    if under_attack:
+                        under_attack_count += 1
+                    else:
+                        not_under_attack_count += 1
+
                 survived_timesteps.append(timestep)
                 print(info)
 
@@ -812,6 +820,8 @@ else:
     GBmemory = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) / (1024 * 1024)
     print("Memory used (GB):", GBmemory)
     print("Environment used:", "env_train" if env == env_train else "env_val", "Seed used:", SEED)
+    print("under_attack_count:", under_attack_count)
+    print("not_under_attack_count:", not_under_attack_count)
 
 if TRAIN:
     agent.buckets.save_buckets_to_disk()

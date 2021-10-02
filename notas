@@ -53,7 +53,7 @@ Another way is to count it more like "continuous space", which is:
 - 1 dimension for each powerline (i set it to "connected" or set it to "disconnected" or don't set it at all)
 - 1 dimension for each powerline change status
 - 1 dimension for each element (set bus)
--1 dimension for each element (change bus)
+- 1 dimension for each element (change bus)
 
 And if you count it like that, you get 157, this is the way it's encoded by default in grid2op.
 You can also mix things and get pretty much all numbers in between (for example you keep counting the countinuous actions like the second method I mentioned, but counts the unitary actions for the discrete ones)
@@ -531,3 +531,60 @@ Moralejas:
 
 - Parece ser un problema que si hacemos una accion y en esa jugada se da el game over lo toma como que invalida la alarma !!!
 (5%)
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+Midiendo bien:
+
+con rho 0.9, de 962 episodios tenemos:
+
+- number_of_alarm_failures_due_to_no_info_in_previous_timesteps: 38,7% (373)
+- number_of_alarm_failures_due_to_action_leading_to_game_over: 6,1% (59)
+
+AHORA
+
+con rho 0.8, de 196 episodios tenemos:
+
+- number_of_alarm_failures_due_to_no_info_in_previous_timesteps: 23% (47)
+- number_of_alarm_failures_due_to_action_leading_to_game_over: 6,6% (13)
+
+Baja de 38,7% a 23%, OK. Probar con 0,7 ???
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+Cosas que tenemos que tener en cuenta para mejorar:
+
+-> min rho
+-> Evitar que la accion sea lo que cause el gmae over !
+
+> Usar el hecho de estar bajo ataque para elegir hacer una accion (ademas del criterio de que el rho sea < 1) ??
+
+Agregar a store_episode_data:
+- under_attack = info["opponent_attack_line"] is not None and len(info["opponent_attack_line"]) > 0
+- obs.time_next_maintenance
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+Podemos predecir cuando va a atacar el oponente ????
+
+    'kwargs_opponent': {"lines_attacked": lines_attacked,
+                        "attack_every_xxx_hour": 24,
+                        "average_attack_duration_hour": 4,
+                        "minimum_attack_duration_hour": 1},
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+Cantidad que estan 'under_attack' vs no cuando perdemos (Para la alarma):
+
+under_attack: 293
+no_under_attack: 26
+
+=> 92% de las veces que perdemos estamos under_attack !!!!
+
+Importante agregar esto entonces:
+
+- under_attack = info["opponent_attack_line"] is not None and len(info["opponent_attack_line"]) > 0
+- obs.time_next_maintenance
+
+(directamente meterle info["opponent_attack_line"])
+

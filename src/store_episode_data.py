@@ -406,33 +406,50 @@ disc_lines_in_cascade = []
 
 
 def extract_timestep_features_for_alarm(
-    episode_seed, env, obs, info, done, timestep, actions_rho, disc_lines_before_cascade
+    episode_seed,
+    env,
+    obs,
+    info,
+    done,
+    timestep,
+    timesteps_since_last_attack,
+    timesteps_since_ongoing_attack_started,
+    actions_rho,
+    disc_lines_before_cascade,
 ):
     if done:
         return None
-    info = {}
-    info["timestep"] = timestep
-    info["disc_lines_before_cascade"] = disc_lines_before_cascade
-    info["actions_rho"] = np.copy(actions_rho)
-    info["rho"] = np.copy(obs.rho)
-    info["topo_vect"] = np.copy(obs.topo_vect)
-    info["line_status"] = np.copy(obs.line_status)
-    info["load_p"] = np.copy(obs.load_p)
-    info["load_q"] = np.copy(obs.load_q)
-    info["load_v"] = np.copy(obs.load_v)
-    info["gen_p"] = np.copy(obs.gen_p)
-    info["gen_q"] = np.copy(obs.gen_q)
-    info["gen_v"] = np.copy(obs.gen_v)
-    info["year"] = obs.year
-    info["month"] = obs.month
-    info["day"] = obs.day  # 1,2,3,4,5, etc
-    info["day_of_week"] = obs.day_of_week  # monday,tuesday,etc
-    info["hour_of_day"] = obs.hour_of_day
-    info["minute_of_hour"] = obs.minute_of_hour
-    info["timestep_overflow"] = np.copy(obs.timestep_overflow)
-    info["time_before_cooldown_line"] = np.copy(obs.time_before_cooldown_line)
-    info["time_before_cooldown_sub"] = np.copy(obs.time_before_cooldown_sub)
-    return info
+    features = {}
+    features["timestep"] = timestep
+    features["disc_lines_before_cascade"] = disc_lines_before_cascade
+    features["actions_rho"] = np.copy(actions_rho)
+    features["rho"] = np.copy(obs.rho)
+    features["topo_vect"] = np.copy(obs.topo_vect)
+    features["line_status"] = np.copy(obs.line_status)
+    features["load_p"] = np.copy(obs.load_p)
+    features["load_q"] = np.copy(obs.load_q)
+    features["load_v"] = np.copy(obs.load_v)
+    features["gen_p"] = np.copy(obs.gen_p)
+    features["gen_q"] = np.copy(obs.gen_q)
+    features["gen_v"] = np.copy(obs.gen_v)
+    features["year"] = obs.year
+    features["month"] = obs.month
+    features["day"] = obs.day  # 1,2,3,4,5, etc
+    features["day_of_week"] = obs.day_of_week  # monday,tuesday,etc
+    features["hour_of_day"] = obs.hour_of_day
+    features["minute_of_hour"] = obs.minute_of_hour
+    features["timestep_overflow"] = np.copy(obs.timestep_overflow)
+    features["time_before_cooldown_line"] = np.copy(obs.time_before_cooldown_line)
+    features["time_before_cooldown_sub"] = np.copy(obs.time_before_cooldown_sub)
+    # Agregadas despues
+    # features["time_since_last_alarm"] = obs.time_since_last_alarm # Esta me parece que estaria mal usarla
+    features["timesteps_since_last_attack"] = timesteps_since_last_attack
+    features["time_next_maintence"] = np.copy(obs.time_next_maintenance)
+    under_attack = info["opponent_attack_line"] is not None and len(info["opponent_attack_line"]) > 0
+    features["under_attack"] = under_attack
+    features["opponent_attack_duration"] = info["opponent_attack_duration"]
+    features["timesteps_since_ongoing_attack_started"] = timesteps_since_ongoing_attack_started
+    return features
 
 
 def save_episode_data_to_disk(name, episode_seed):
@@ -446,7 +463,17 @@ def save_episode_data_to_disk(name, episode_seed):
     print("Saved episodes data to", save_name)
 
 
-def store_information_for_alarm(episode_seed, env, obs, info, done, timestep, actions_rho):
+def store_information_for_alarm(
+    episode_seed,
+    env,
+    obs,
+    info,
+    done,
+    timestep,
+    timesteps_since_last_attack,
+    timesteps_since_ongoing_attack_started,
+    actions_rho,
+):
     global episode_data
     global disc_lines_before_cascade
     global disc_lines_in_cascade
@@ -486,7 +513,16 @@ def store_information_for_alarm(episode_seed, env, obs, info, done, timestep, ac
     if not done:
         assert len(actions_rho) > 0
         features = extract_timestep_features_for_alarm(
-            episode_seed, env, obs, info, done, timestep, actions_rho, disc_lines_before_cascade_copy
+            episode_seed,
+            env,
+            obs,
+            info,
+            done,
+            timestep,
+            timesteps_since_last_attack,
+            timesteps_since_ongoing_attack_started,
+            actions_rho,
+            disc_lines_before_cascade_copy,
         )
 
     if done:
@@ -580,22 +616,55 @@ else:
 
         done = False
         info = None
+        timesteps_since_last_attack = 0
+        timesteps_since_ongoing_attack_started = -1
         timestep = 0
         reward = 0
         below_rho_threshold = True
         while not done:
             act, actions_rho = agent.act(env, obs, reward, False, below_rho_threshold, done)
-            store_information_for_alarm(env_seed, env, obs, info, done, timestep, actions_rho)
+            store_information_for_alarm(
+                env_seed,
+                env,
+                obs,
+                info,
+                done,
+                timestep,
+                timesteps_since_last_attack,
+                timesteps_since_ongoing_attack_started,
+                actions_rho,
+            )
             obs, reward, done, info = env.step(act)
             below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
+
             under_attack = info["opponent_attack_line"] is not None and len(info["opponent_attack_line"]) > 0
+            if under_attack:
+                timesteps_since_last_attack = 0
+                if timesteps_since_ongoing_attack_started == -1:
+                    timesteps_since_ongoing_attack_started = 0
+                else:
+                    timesteps_since_ongoing_attack_started += 1
+            else:
+                timesteps_since_last_attack += 1
+                timesteps_since_ongoing_attack_started = -1
+
             timestep = env.nb_time_step
             if done:
                 survived_timesteps.append(timestep)
                 print(info)
 
             assert not obs.is_alarm_illegal[0]  # Only true if last alarm was illegal
-        store_information_for_alarm(env_seed, env, obs, info, done, timestep, actions_rho)
+        store_information_for_alarm(
+            env_seed,
+            env,
+            obs,
+            info,
+            done,
+            timestep,
+            timesteps_since_last_attack,
+            timesteps_since_ongoing_attack_started,
+            actions_rho,
+        )
 
         print("Completed episode", i, ",number of timesteps:", timestep)
     print("---------------------------")
