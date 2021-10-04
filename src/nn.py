@@ -37,16 +37,17 @@ labels = np.array(labels)
 
 model = tfk.Sequential()
 # rho 59 dims
-model.add(tfk.layers.Dense(20, input_dim=59, activation="relu"))
-model.add(tfk.layers.Dense(8, activation="relu"))
+model.add(tfk.layers.Dense(400, input_dim=59, activation="relu"))
+model.add(tfk.layers.Dense(50, activation="relu"))
 model.add(tfk.layers.Dense(1, activation="sigmoid"))
 
 model.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
 
 # fit the keras model on the dataset
-model.fit(rho_feature, labels, epochs=150, batch_size=100)
+# Increase batch size in gpu !
+model.fit(rho_feature, labels, epochs=300, batch_size=64)
 
-model.save("model.h5")
+model.save("data/model-400-50.h5")
 print("Saved model to disk")
 
 _, accuracy = model.evaluate(rho_feature, labels)

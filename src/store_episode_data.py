@@ -266,47 +266,47 @@ class Trainer(BaseAgent):
 
         # GET RHOS FOR ALARM STUFF >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         actions_rho = []
-        if EPISODE_INFORMATION_STORAGE_THRESHOLD < observation.rho.max():
-            for action_vect in self.all_actions:
-                illegal_or_done = np.full(59, 99.0)
-                action = self.action_space.from_vect(action_vect)
-                is_legal = self.is_legal_action(action, observation)
-
-                if not is_legal:
-                    actions_rho.append(illegal_or_done)
-                    continue
-
-                obs, _, done, info_simulate = observation.simulate(action)
-                observation._obs_env._reset_to_orig_state()
-                assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
-
-                if done:
-                    actions_rho.append(illegal_or_done)
-                    continue
-                actions_rho.append(obs.rho)
+        # if EPISODE_INFORMATION_STORAGE_THRESHOLD < observation.rho.max():
+        # for action_vect in self.all_actions:
+        #    illegal_or_done = np.full(59, 99.0)
+        #    action = self.action_space.from_vect(action_vect)
+        #    is_legal = self.is_legal_action(action, observation)
+        #
+        #    if not is_legal:
+        #        actions_rho.append(illegal_or_done)
+        #        continue
+        #
+        #    obs, _, done, info_simulate = observation.simulate(action)
+        #    observation._obs_env._reset_to_orig_state()
+        #    assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
+        #
+        #    if done:
+        #        actions_rho.append(illegal_or_done)
+        #        continue
+        #    actions_rho.append(obs.rho)
         # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< GET RHOS FOR ALARM STUFF
 
         if some_line_disconnected:
             # TODO: Mix reconnect action with other actions ??
             action = self._reconnect_action(observation)
             if action is not None:
-                return action, actions_rho
+                return action, []  # actions_rho
 
         if below_rho_threshold:  # No overflow
             if not some_line_disconnected:
                 action = self._reset_redispatch(observation)
                 if action is not None:
                     # print("RESET REDISPATCH !")
-                    return action, actions_rho
+                    return action, []  # actions_rho
                 action = self._reset_topology(observation)
                 if action is not None:
                     # print("RESET TOPOLOGY !")
-                    return action, actions_rho
+                    return action, []  # actions_rho
             _, _, done, _ = observation.simulate(self.do_nothing_action)
             observation._obs_env._reset_to_orig_state()
             # TODO: Should we simulate like PARL and do something else if this would fail? Sometimes done returns true
             # assert not done
-            return self.do_nothing_action, actions_rho
+            return self.do_nothing_action, []  # actions_rho
 
         o, _, d, info_simulate = observation.simulate(self.do_nothing_action)
         observation._obs_env._reset_to_orig_state()
@@ -317,6 +317,26 @@ class Trainer(BaseAgent):
         selected_action = self.action_space({})
         min_rho = 99
 
+        #################
+        actions_rho = []
+        for action_vect in self.all_actions:
+            illegal_or_done = np.full(59, 99.0)
+            action = self.action_space.from_vect(action_vect)
+            is_legal = self.is_legal_action(action, observation)
+
+            if not is_legal:
+                actions_rho.append(illegal_or_done)
+                continue
+
+            obs, _, done, info_simulate = observation.simulate(action)
+            observation._obs_env._reset_to_orig_state()
+            assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
+
+            if done:
+                actions_rho.append(illegal_or_done)
+                continue
+            actions_rho.append(obs.rho)
+        ##############
         assert len(actions_rho) > 0
         action_index = 0
         for rho in actions_rho:
@@ -327,10 +347,10 @@ class Trainer(BaseAgent):
 
         # < REMOVE ONCE WE KNOW ITS OK
         start_time = time.time()
-        return selected_action, actions_rho
+        return selected_action, []  # actions_rho
 
 
-EPISODE_INFORMATION_STORAGE_THRESHOLD = 0.8
+EPISODE_INFORMATION_STORAGE_THRESHOLD = 0.0
 episode_data = None
 disc_lines_before_cascade = []
 disc_lines_in_cascade = []
@@ -511,7 +531,7 @@ def store_information_for_alarm(
         disc_lines_in_cascade_copy = copy.deepcopy(disc_lines_in_cascade)
 
     if not done:
-        assert len(actions_rho) > 0
+        # assert len(actions_rho) > 0
         features = extract_timestep_features_for_alarm(
             episode_seed,
             env,
@@ -666,7 +686,7 @@ else:
             actions_rho,
         )
 
-        print("Completed episode", i, ",number of timesteps:", timestep)
+    print("Completed episode", i, ",number of timesteps:", timestep)
     print("---------------------------")
     print("Episodes:", episode_names)
     print("Num timesteps", len(survived_timesteps), " survived timesteps:", survived_timesteps)
