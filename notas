@@ -588,3 +588,15 @@ Importante agregar esto entonces:
 
 (directamente meterle info["opponent_attack_line"])
 
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+Hello,
+Overflows are divided into two categories:
+- the line is in overflow for too long
+- the overflow on the line is too high (>200% of its thermal limit, or 150% of its limits, I don't remember)
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+number_of_alarm_failures_due_to_no_info_in_previous_timesteps
+
+con 0.7 de rho tenemos 9% de los scenarios donde no visitamos el timestep 7 posiciones anterior al game over!
