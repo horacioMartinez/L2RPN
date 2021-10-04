@@ -45,7 +45,15 @@ def generate_nn_training_data(episodes_data):
             input_data.append(features)
             labels.append(does_finish_in_11_or_less_timesteps)
 
-    return input_data, labels
+    data = {"input_data": input_data, "labels": labels}
+    save_name = "data/nn_training_data.pkl"
+    if os.path.isfile(save_name):
+        print("File already exists!!")
+        assert False
+    print("Saving NN training data to file:", save_name)
+
+    with open(save_name, "wb") as f:
+        pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
 
 def nn_alarm_action(timestep, last_alarm_trigger_timestep, feature_last_timestep_rho, env, features):
@@ -171,9 +179,6 @@ for episodes_data_file in episodes_data_files:
         episodes_data.append(pickle.load(f))
     aux += 1
 
-episode_data_index = 0
-alarm_scores = []
-episode_names = []
 number_of_alarm_failures_due_to_action_leading_to_game_over = 0
 number_of_alarm_failures_due_to_no_info_in_previous_timesteps = 0
 
@@ -207,6 +212,10 @@ episodes_data = filtered_array
 #
 
 RHO_THRESHOLD_VISIT = 0.0
+
+episode_data_index = 0
+alarm_scores = []
+episode_names = []
 
 for episode_data in episodes_data:
     episode_name = episodes_data_files[episode_data_index].split("-", 1)[-1].split(".", 1)[0]
@@ -318,7 +327,14 @@ for episode_data in episodes_data:
 
         alarm.update_timestep(timestep, raise_alarm_vect)
         # print(feature_rho)
-    print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< DONE:", alarm_scores[len(alarm_scores) - 1])
+    print(
+        "<<<<<<<<<<<<<<<<<< DONE EPISODE:",
+        episode_data_index + 1,
+        "of",
+        len(episodes_data),
+        " Alarm score:",
+        alarm_scores[len(alarm_scores) - 1],
+    )
     episode_data_index += 1
 
 print("Num episodes:", len(episode_names))
@@ -339,6 +355,6 @@ print(
     number_of_alarm_failures_due_to_action_leading_to_game_over,
 )
 
-training_data = generate_nn_training_data(episodes_data)
+generate_nn_training_data(episodes_data)
 
 print("FINISH!")
