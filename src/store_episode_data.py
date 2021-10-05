@@ -29,6 +29,10 @@ RHO_THRESHOLD = 1.0
 RHO_THRESHOLD_RESET_REDISPATCH = 1.0
 RHO_THRESHOLD_RECONNECT = 1.0
 
+TRY_AVOID_GAME_OVER_ACTION = False
+
+print("TRY_AVOID_GAME_OVER_ACTION:", TRY_AVOID_GAME_OVER_ACTION)
+
 
 class Trainer(BaseAgent):
     def is_legal_bus_action(self, action, obs):
@@ -335,6 +339,20 @@ class Trainer(BaseAgent):
             if done:
                 actions_rho.append(illegal_or_done)
                 continue
+            #
+            if TRY_AVOID_GAME_OVER_ACTION:
+                THRESHOLD_MIN_OVERFLOW_COUNT_RHO_AVOID_POWER_OFF = 8
+                THRESHOLD_MIN_MAX_RHO_AVOID_POWER_OFF = 1.0
+                count_oveflow_but_connected = (obs.rho > 1.0).sum()
+                count_disconnected = len(obs.rho) - np.count_nonzero(obs.rho)
+                count_overflow = count_oveflow_but_connected + count_disconnected
+                if (
+                    obs.rho.max() > THRESHOLD_MIN_MAX_RHO_AVOID_POWER_OFF
+                    and count_overflow > THRESHOLD_MIN_OVERFLOW_COUNT_RHO_AVOID_POWER_OFF
+                ):
+                    actions_rho.append(illegal_or_done)
+                    continue
+            #
             actions_rho.append(obs.rho)
         ##############
         assert len(actions_rho) > 0
@@ -494,6 +512,8 @@ def store_information_for_alarm(
     timesteps_since_ongoing_attack_started,
     actions_rho,
 ):
+    # "NOT SAVING NOW!"
+    return
     global episode_data
     global disc_lines_before_cascade
     global disc_lines_in_cascade
@@ -571,7 +591,7 @@ def store_information_for_alarm(
 
 
 if len(sys.argv) < 4:
-    print("Not enough arguments. USAGE: <Eval/Train/EvalInTraining> <NumScenarios> <#cpus> <id_cpu>")
+    print("Not enough arguments. USAGE: <Eval/Train/EvalInTraining> <NumScenarios> <#cpus> <id_cpu> <SEED>")
     exit()
 
 assert str(sys.argv[1]) == "Train" or str(sys.argv[1]) == "Eval" or str(sys.argv[1]) == "EvalInTraining"
@@ -581,6 +601,7 @@ EVAL_TRAINING_DATA = str(sys.argv[1]) == "EvalInTraining"
 number_of_scenarios = int(sys.argv[2])
 NUMBER_OF_CPUS = int(sys.argv[3])
 CPU_ID = int(sys.argv[4])
+SEED = int(sys.argv[5])
 
 assert CPU_ID < NUMBER_OF_CPUS
 
@@ -593,7 +614,7 @@ MAX_BATCH_ITERATIONS = 1000000
 NUM_CORE = cpu_count()
 SAVE_BUCKET_INTERVAL = 1
 # SEED = CPU_ID
-SEED = 0
+# SEED = 0
 print("CPU counts：%d" % NUM_CORE)
 
 # env = grid2op.make("l2rpn_icaps_2021_large")
@@ -685,8 +706,8 @@ else:
             timesteps_since_ongoing_attack_started,
             actions_rho,
         )
+        print("Completed episode", i, ",number of timesteps:", timestep)
 
-    print("Completed episode", i, ",number of timesteps:", timestep)
     print("---------------------------")
     print("Episodes:", episode_names)
     print("Num timesteps", len(survived_timesteps), " survived timesteps:", survived_timesteps)
