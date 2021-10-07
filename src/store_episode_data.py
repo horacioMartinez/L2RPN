@@ -29,9 +29,8 @@ RHO_THRESHOLD = 1.0
 RHO_THRESHOLD_RESET_REDISPATCH = 1.0
 RHO_THRESHOLD_RECONNECT = 1.0
 
-TRY_AVOID_GAME_OVER_ACTION = False
-
-print("TRY_AVOID_GAME_OVER_ACTION:", TRY_AVOID_GAME_OVER_ACTION)
+# No scientific notation
+np.set_printoptions(suppress=True)
 
 
 class Trainer(BaseAgent):
@@ -259,7 +258,7 @@ class Trainer(BaseAgent):
         assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
         return combined_action
 
-    def act(self, env, observation, reward, training, below_rho_threshold, done=False):
+    def act(self, env, observation, reward, training, below_rho_threshold, done):
         global start_time
 
         # print("--- %s seconds ---" % (time.time() - start_time))
@@ -339,20 +338,11 @@ class Trainer(BaseAgent):
             if done:
                 actions_rho.append(illegal_or_done)
                 continue
-            #
-            if TRY_AVOID_GAME_OVER_ACTION:
-                THRESHOLD_MIN_OVERFLOW_COUNT_RHO_AVOID_POWER_OFF = 8
-                THRESHOLD_MIN_MAX_RHO_AVOID_POWER_OFF = 1.0
-                count_oveflow_but_connected = (obs.rho > 1.0).sum()
-                count_disconnected = len(obs.rho) - np.count_nonzero(obs.rho)
-                count_overflow = count_oveflow_but_connected + count_disconnected
-                if (
-                    obs.rho.max() > THRESHOLD_MIN_MAX_RHO_AVOID_POWER_OFF
-                    and count_overflow > THRESHOLD_MIN_OVERFLOW_COUNT_RHO_AVOID_POWER_OFF
-                ):
-                    actions_rho.append(illegal_or_done)
-                    continue
-            #
+            count_disconnected_sim = len(obs.rho) - np.count_nonzero(obs.rho)
+            THRESHOLD_MAX_COUNT_DISCONNECTED_SIMUL = 3
+            if count_disconnected_sim >= THRESHOLD_MAX_COUNT_DISCONNECTED_SIMUL:
+                actions_rho.append(illegal_or_done)
+                continue
             actions_rho.append(obs.rho)
         ##############
         assert len(actions_rho) > 0
@@ -363,7 +353,6 @@ class Trainer(BaseAgent):
                 selected_action = self.action_space.from_vect(self.all_actions[action_index])
             action_index += 1
 
-        # < REMOVE ONCE WE KNOW ITS OK
         start_time = time.time()
         return selected_action, []  # actions_rho
 
@@ -641,6 +630,7 @@ else:
         assert False  # Only use training data for this!
         env = env_val
     print("Total number of chronics:", len(env.chronics_handler.chronics_used))
+    total_actions_leading_to_game_over = 0
     for i in range(number_of_scenarios):
         # if i < 57:
         # env.reset()
@@ -650,6 +640,18 @@ else:
             episode_true_index += 1
         env_seed = i + SEED
         agent_seed = i + SEED
+        ################# RUN SPECFIC EPISODE #################
+        # env_seed = 1337
+        # agent_seed = 0
+        # env_train.chronics_handler.reset()
+        # episode_id = np.where(
+        #    env_train.chronics_handler.real_data.subpaths
+        #    == "/home/horacio/data_grid2op/l2rpn_icaps_2021_large_train/chronics/Scenario_april_023"
+        # )[0][0]
+        # print("episode_id:", episode_id)
+        # env.set_id(episode_id)
+        #######################################################
+
         env.seed(env_seed)
         obs = env.reset()
         print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Running episode:", i, "(", env.chronics_handler.get_name(), ")")
@@ -664,17 +666,6 @@ else:
         below_rho_threshold = True
         while not done:
             act, actions_rho = agent.act(env, obs, reward, False, below_rho_threshold, done)
-            store_information_for_alarm(
-                env_seed,
-                env,
-                obs,
-                info,
-                done,
-                timestep,
-                timesteps_since_last_attack,
-                timesteps_since_ongoing_attack_started,
-                actions_rho,
-            )
             obs, reward, done, info = env.step(act)
             below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
 

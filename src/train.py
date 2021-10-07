@@ -358,9 +358,14 @@ class Trainer(BaseAgent):
             obs, _, done, info_simulate = observation.simulate(action)
             observation._obs_env._reset_to_orig_state()
             assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
-
             if done:
                 continue
+
+            count_disconnected_sim = len(obs.rho) - np.count_nonzero(obs.rho)
+            THRESHOLD_MAX_COUNT_DISCONNECTED_SIMUL = 3
+            if count_disconnected_sim >= THRESHOLD_MAX_COUNT_DISCONNECTED_SIMUL:
+                continue
+
             if obs.rho.max() < min_rho:
                 min_rho = obs.rho.max()
                 selected_action = action
