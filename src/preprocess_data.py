@@ -101,7 +101,7 @@ def chunks(lst, n):
 
 
 if len(sys.argv) < 1:
-    print("Not enough arguments. USAGE: <Eval/Train> <NumScenarios (-1 for all)>")
+    print("Not enough arguments. USAGE: <Eval/Train> <NumScenarios (-1 for all)> <Raw/Balanced>")
     exit()
 
 assert str(sys.argv[1]) == "Train" or str(sys.argv[1]) == "Eval"
@@ -114,6 +114,9 @@ else:
 
 number_of_scenarios = int(sys.argv[2])
 
+assert str(sys.argv[3]) == "Raw" or str(sys.argv[3]) == "Balanced"
+BALANCED = str(sys.argv[3]) == "Balanced"
+
 random.seed(0)
 np.random.seed(0)
 
@@ -121,8 +124,11 @@ np.random.seed(0)
 episodes_data_files = [f for f in listdir(EPISODES_DATA_PATH) if isfile(join(EPISODES_DATA_PATH, f))]
 random.shuffle(episodes_data_files)
 
-EPISODES_CHUNK_SIZE = 10000
-PREPROCESSES_CHUNK_SIZE = 1000
+EPISODES_CHUNK_SIZE = 2500
+PREPROCESSES_CHUNK_SIZE = 500
+if BALANCED:
+    EPISODES_CHUNK_SIZE = 250000
+    PREPROCESSES_CHUNK_SIZE = 500
 
 episode_data_file_chunks = chunks(episodes_data_files, EPISODES_CHUNK_SIZE)
 
@@ -130,17 +136,23 @@ processed_scenarios = 0
 chunk_index = 0
 for episode_data_file_chunk in episode_data_file_chunks:
     if TRAINING_DATA:
-        prefix = "data/nn_training_data/nn_training_data-"
+        if BALANCED:
+            prefix = "data/nn_training_data_balanced/nn_training_data-"
+        else:
+            prefix = "data/nn_training_data/nn_training_data-"
     else:
-        prefix = "data/nn_val_data/nn_val_data-"
+        if BALANCED:
+            prefix = "data/nn_val_data_balanced/nn_val_data-"
+        else:
+            prefix = "data/nn_val_data/nn_val_data-"
     save_name = prefix + str(chunk_index) + ".pkl"
     chunk_index += 1
     if os.path.isfile(save_name):
         print(">>> FILE ALREADY EXISTS!!:", save_name)
         assert False
 
-    processing_episode_data_file_chunks = chunks(episode_data_file_chunk, EPISODES_CHUNK_SIZE)
-
+    processing_episode_data_file_chunks = chunks(episode_data_file_chunk, PREPROCESSES_CHUNK_SIZE)
+    print("Processing chunk: ", chunk_index)
     input_data = []
     labels = []
     for processing_episode_data_file_chunk in processing_episode_data_file_chunks:
@@ -148,13 +160,20 @@ for episode_data_file_chunk in episode_data_file_chunks:
         for episodes_data_file in processing_episode_data_file_chunk:
             if number_of_scenarios > 0 and processed_scenarios == number_of_scenarios:
                 break
-            with open(EPISODES_DATA_PATH + "/" + episodes_data_file, "rb") as f:
-                episodes_data.append(pickle.load(f))
+            try:
+                with open(EPISODES_DATA_PATH + "/" + episodes_data_file, "rb") as f:
+                    try:
+                        episodes_data.append(pickle.load(f))
+                    except EOFError:
+                        print("error on file", episodes_data_file)
+                        continue
+            except EOFError:
+                print("error on file", episodes_data_file)
+                continue
             processed_scenarios += 1
 
         number_of_alarm_failures_due_to_action_leading_to_game_over = 0
         number_of_alarm_failures_due_to_no_info_in_previous_timesteps = 0
-
         # Remove scenarios where we win
         filtered_array = []
         for i in range(0, len(episodes_data)):
@@ -170,7 +189,17 @@ for episode_data_file_chunk in episode_data_file_chunks:
         for i in range(0, len(episodes_data)):
             timesteps_data = episodes_data[i]
             last_timestep = timesteps_data[len(timesteps_data) - 1]["timestep"]
+
+            if BALANCED:
+                non_true_indexes = np.arange(len(timesteps_data) - 12)
+                np.random.shuffle(non_true_indexes)
+                non_true_indexes = non_true_indexes[:12]
+                true_indexes = np.arange(len(timesteps_data) - 12, len(timesteps_data))
+                balanced_indexes = [*non_true_indexes, *true_indexes]
             for j in range(0, len(timesteps_data)):
+                if BALANCED:
+                    if j not in balanced_indexes:
+                        continue
                 timestep_data = timesteps_data[j]
                 if timestep_data["done"]:
                     continue
@@ -182,9 +211,11 @@ for episode_data_file_chunk in episode_data_file_chunks:
                 input = extract_timestep_features(timestep_data, previous_timestep_data)
                 input_data.append(input)
                 labels.append(does_finish_in_11_or_less_timesteps)
+            print("chunk_index: ", chunk_index)
+            print("processed_scenarios:", processed_scenarios)
             print("Processed episode", i, "out of", len(episodes_data) - 1)
-        del episodes_data
-        gc.collect()
+        # del episodes_data
+        # gc.collect()
 
     input_data = np.array(input_data)
     labels = np.array(labels)

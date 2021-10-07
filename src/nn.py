@@ -18,6 +18,36 @@ import tensorflow.keras.optimizers as tfko
 import tensorflow.keras.layers as tfkl
 import tensorflow.keras.activations as tfka
 
+# input_shape = (self.observation_size * self.num_frames,)
+# input_layer = tfk.Input(shape = input_shape, name="input_obs")
+# lay1 = tfkl.Dense(self.observation_size * 2, name="fc_1")(input_layer)
+# lay1 = tfka.relu(lay1, alpha=0.01) #leaky_relu
+
+# lay2 = tfkl.Dense(self.observation_size, name="fc_2")(lay1)
+# lay2 = tfka.relu(lay2, alpha=0.01) #leaky_relu
+
+# lay3 = tfkl.Dense(896, name="fc_3")(lay2)
+# lay3 = tfka.relu(lay3, alpha=0.01) #leaky_relu
+
+# lay4 = tfkl.Dense(512, name="fc_4")(lay3)
+# lay4 = tfka.relu(lay4, alpha=0.01) #leaky_relu
+
+# advantage = tfkl.Dense(384, name="fc_adv")(lay4)
+# advantage = tfka.relu(advantage, alpha=0.01) #leaky_relu
+# advantage = tfkl.Dense(self.action_size, name="adv")(advantage)
+# advantage_mean = tf.math.reduce_mean(advantage,
+# axis=1, keepdims=True,
+# name="adv_mean")
+# advantage = tfkl.subtract([advantage, advantage_mean],
+# name="adv_subtract")
+
+# value = tfkl.Dense(384, name="fc_val")(lay4)
+# value = tfka.relu(value, alpha=0.01) #leaky_relu
+# value = tfkl.Dense(1, name="val")(value)
+
+# Q = tf.math.add(value, advantage, name="Qout")
+
+
 # >>>>>> Should i map rho of 0 to 99 (To make it clean that higher rho is worse) ???
 # >>>>>> Should i normalize inputs ???
 
