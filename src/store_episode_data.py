@@ -15,13 +15,11 @@ import time
 import grid2op
 import numpy as np
 from multiprocessing import cpu_count
-from grid2op.Environment import SingleEnvMultiProcess
 from grid2op.Reward.BaseReward import BaseReward
 from grid2op.Reward import RedispReward
 from grid2op.Agent import BaseAgent
 from scipy.optimize.optimize import bracket
 from buckets import Buckets
-from alarm import Alarm
 
 # NOTE: Final agent should have same thresholds !
 ALARM_RHO_THRESHOLD = 1.0
@@ -480,7 +478,14 @@ def extract_timestep_features_for_alarm(
 
 
 def save_episode_data_to_disk(name, episode_seed):
-    save_name = "data/episodes_data/episode_data-" + name + "-" + str(episode_seed) + ".pkl"
+    print("TRAINING_DATA:")
+    print(TRAINING_DATA)
+    if TRAINING_DATA:
+        prefix = "data/episodes_data"
+    else:
+        prefix = "data/episodes_data_val"
+
+    save_name = prefix + "/episode_data-" + name + "-" + str(episode_seed) + ".pkl"
     if os.path.isfile(save_name):
         print("File already exists!!")
         assert False
@@ -501,8 +506,6 @@ def store_information_for_alarm(
     timesteps_since_ongoing_attack_started,
     actions_rho,
 ):
-    # "NOT SAVING NOW!"
-    return
     global episode_data
     global disc_lines_before_cascade
     global disc_lines_in_cascade
@@ -580,12 +583,11 @@ def store_information_for_alarm(
 
 
 if len(sys.argv) < 4:
-    print("Not enough arguments. USAGE: <Eval/Train/EvalInTraining> <NumScenarios> <#cpus> <id_cpu> <SEED>")
+    print("Not enough arguments. USAGE: <Eval/Train> <NumScenarios> <#cpus> <id_cpu> <SEED>")
     exit()
 
-assert str(sys.argv[1]) == "Train" or str(sys.argv[1]) == "Eval" or str(sys.argv[1]) == "EvalInTraining"
-TRAIN = str(sys.argv[1]) == "Train"
-EVAL_TRAINING_DATA = str(sys.argv[1]) == "EvalInTraining"
+assert str(sys.argv[1]) == "Train" or str(sys.argv[1]) == "Eval"
+TRAINING_DATA = str(sys.argv[1]) == "Train"
 
 number_of_scenarios = int(sys.argv[2])
 NUMBER_OF_CPUS = int(sys.argv[3])
@@ -619,73 +621,49 @@ env_train.chronics_handler.seed(SEED)
 env_train.chronics_handler.shuffle()
 
 episode_true_index = 0
-if TRAIN:
-    assert False
+episode_names = []
+survived_timesteps = []
+
+if TRAINING_DATA:
+    env = env_train
 else:
-    episode_names = []
-    survived_timesteps = []
-    if EVAL_TRAINING_DATA:
-        env = env_train
-    else:
-        assert False  # Only use training data for this!
-        env = env_val
-    print("Total number of chronics:", len(env.chronics_handler.chronics_used))
-    total_actions_leading_to_game_over = 0
-    for i in range(number_of_scenarios):
-        # if i < 57:
-        # env.reset()
-        #            continue
-        while episode_true_index < i * NUMBER_OF_CPUS + CPU_ID:
-            env.reset()
-            episode_true_index += 1
-        env_seed = i + SEED
-        agent_seed = i + SEED
-        ################# RUN SPECFIC EPISODE #################
-        # env_seed = 1337
-        # agent_seed = 0
-        # env_train.chronics_handler.reset()
-        # episode_id = np.where(
-        #    env_train.chronics_handler.real_data.subpaths
-        #    == "/home/horacio/data_grid2op/l2rpn_icaps_2021_large_train/chronics/Scenario_april_023"
-        # )[0][0]
-        # print("episode_id:", episode_id)
-        # env.set_id(episode_id)
-        #######################################################
+    env = env_val
 
-        env.seed(env_seed)
-        obs = env.reset()
-        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Running episode:", i, "(", env.chronics_handler.get_name(), ")")
-        episode_names.append(env.chronics_handler.get_name())
-
-        done = False
-        info = None
-        timesteps_since_last_attack = 0
-        timesteps_since_ongoing_attack_started = -1
-        timestep = 0
-        reward = 0
-        below_rho_threshold = True
-        while not done:
-            act, actions_rho = agent.act(env, obs, reward, False, below_rho_threshold, done)
-            obs, reward, done, info = env.step(act)
-            below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
-
-            under_attack = info["opponent_attack_line"] is not None and len(info["opponent_attack_line"]) > 0
-            if under_attack:
-                timesteps_since_last_attack = 0
-                if timesteps_since_ongoing_attack_started == -1:
-                    timesteps_since_ongoing_attack_started = 0
-                else:
-                    timesteps_since_ongoing_attack_started += 1
-            else:
-                timesteps_since_last_attack += 1
-                timesteps_since_ongoing_attack_started = -1
-
-            timestep = env.nb_time_step
-            if done:
-                survived_timesteps.append(timestep)
-                print(info)
-
-            assert not obs.is_alarm_illegal[0]  # Only true if last alarm was illegal
+print("Total number of chronics:", len(env.chronics_handler.chronics_used))
+total_actions_leading_to_game_over = 0
+for i in range(number_of_scenarios):
+    # if i < 57:
+    # env.reset()
+    #            continue
+    while episode_true_index < i * NUMBER_OF_CPUS + CPU_ID:
+        env.reset()
+        episode_true_index += 1
+    env_seed = i + SEED
+    agent_seed = i + SEED
+    ################# RUN SPECFIC EPISODE #################
+    # env_seed = 1337
+    # agent_seed = 0
+    # env_train.chronics_handler.reset()
+    # episode_id = np.where(
+    #    env_train.chronics_handler.real_data.subpaths
+    #    == "/home/horacio/data_grid2op/l2rpn_icaps_2021_large_train/chronics/Scenario_april_023"
+    # )[0][0]
+    # print("episode_id:", episode_id)
+    # env.set_id(episode_id)
+    #######################################################
+    env.seed(env_seed)
+    obs = env.reset()
+    print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Running episode:", i, "(", env.chronics_handler.get_name(), ")")
+    episode_names.append(env.chronics_handler.get_name())
+    done = False
+    info = None
+    timesteps_since_last_attack = 0
+    timesteps_since_ongoing_attack_started = -1
+    timestep = 0
+    reward = 0
+    below_rho_threshold = True
+    while not done:
+        act, actions_rho = agent.act(env, obs, reward, False, below_rho_threshold, done)
         store_information_for_alarm(
             env_seed,
             env,
@@ -697,20 +675,44 @@ else:
             timesteps_since_ongoing_attack_started,
             actions_rho,
         )
-        print("Completed episode", i, ",number of timesteps:", timestep)
+        obs, reward, done, info = env.step(act)
+        below_rho_threshold = obs.rho.max() < RHO_THRESHOLD
+        under_attack = info["opponent_attack_line"] is not None and len(info["opponent_attack_line"]) > 0
+        if under_attack:
+            timesteps_since_last_attack = 0
+            if timesteps_since_ongoing_attack_started == -1:
+                timesteps_since_ongoing_attack_started = 0
+            else:
+                timesteps_since_ongoing_attack_started += 1
+        else:
+            timesteps_since_last_attack += 1
+            timesteps_since_ongoing_attack_started = -1
+        timestep = env.nb_time_step
+        if done:
+            survived_timesteps.append(timestep)
+            print(info)
+        assert not obs.is_alarm_illegal[0]  # Only true if last alarm was illegal
+    store_information_for_alarm(
+        env_seed,
+        env,
+        obs,
+        info,
+        done,
+        timestep,
+        timesteps_since_last_attack,
+        timesteps_since_ongoing_attack_started,
+        actions_rho,
+    )
+    print("Completed episode", i, ",number of timesteps:", timestep)
+print("---------------------------")
+print("Episodes:", episode_names)
+print("Num timesteps", len(survived_timesteps), " survived timesteps:", survived_timesteps)
+average = 0
+for survived_timestep in survived_timesteps:
+    average += survived_timestep
+average = average / len(survived_timesteps)
+print("-> Average survived timesteps:", average)
+GBmemory = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) / (1024 * 1024)
 
-    print("---------------------------")
-    print("Episodes:", episode_names)
-    print("Num timesteps", len(survived_timesteps), " survived timesteps:", survived_timesteps)
-    average = 0
-    for survived_timestep in survived_timesteps:
-        average += survived_timestep
-    average = average / len(survived_timesteps)
-    print("-> Average survived timesteps:", average)
-    GBmemory = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) / (1024 * 1024)
-    print("Memory used (GB):", GBmemory)
-    print("Environment used:", "env_train" if env == env_train else "env_val", "Seed used:", SEED)
-
-if TRAIN:
-    agent.buckets.save_buckets_to_disk()
-print("FINISH!!")
+print("Memory used (GB):", GBmemory)
+print("Environment used:", "env_train" if env == env_train else "env_val", "Seed used:", SEED)

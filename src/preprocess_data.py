@@ -82,21 +82,16 @@ def extract_timestep_features(timestep_data, previous_timestep_data):
 
 
 if len(sys.argv) < 1:
-    print("Not enough arguments. USAGE: <NumScenarios>")
+    print("Not enough arguments. USAGE: <NumScenarios (-1 for all)> <Raw/Balanced>")
     exit()
 number_of_scenarios = int(sys.argv[1])
 
+random.seed(0)
+
 save_name = "data/nn_training_data.pkl"
 if os.path.isfile(save_name):
-    print(">>> FILE ALREADY EXISTS!!")
+    print(">>> FILE ALREADY EXISTS!!:", save_name)
     assert False
-
-random.seed(0)
-MAX_MEMORY_GB = 32
-start_time = time.time()
-NUM_CORE = cpu_count()
-SEED = 0
-print("CPU counts：%d" % NUM_CORE)
 
 
 EPISODES_DATA_PATH = "data/episodes_data"
@@ -107,7 +102,7 @@ random.shuffle(episodes_data_files)
 episodes_data = []
 aux = 0
 for episodes_data_file in episodes_data_files:
-    if aux == number_of_scenarios:
+    if number_of_scenarios > 0 and aux == number_of_scenarios:
         break
     with open(EPISODES_DATA_PATH + "/" + episodes_data_file, "rb") as f:
         episodes_data.append(pickle.load(f))
@@ -149,6 +144,7 @@ for i in range(0, len(episodes_data)):
         input = extract_timestep_features(timestep_data, previous_timestep_data)
         input_data.append(input)
         labels.append(does_finish_in_11_or_less_timesteps)
+    print("Processed episode", i, "out of", len(episodes_data) - 1)
 
 input_data = np.array(input_data)
 labels = np.array(labels)
