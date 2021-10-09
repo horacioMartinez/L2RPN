@@ -148,9 +148,6 @@ if len(sys.argv) < 6:
     print("Not enough arguments. USAGE: <model_X> <Train/Eval> <Raw/Balanced> <epochs> <batch_size>")
     exit()
 
-# TODO:::::::::::::::::::
-
-# LOAD CHUNKS INTO MEMORY !!!!!!!!!!!!!!
 model_name = str(sys.argv[1])
 EVAL = str(sys.argv[2]) == "Eval"
 if not EVAL:
@@ -161,7 +158,10 @@ if not BALANCED:
 epochs = int(sys.argv[4])  # 300
 batch_size = int(sys.argv[5])  # 64
 
-model_path = "data/model/" + model_name + ".tf"
+if BALANCED:
+    model_path = "data/model/" + model_name + "-balanced" + ".tf"
+else:
+    model_path = "data/model/" + model_name + ".tf"
 
 if EVAL:
     eval_model(model_path, BALANCED)
@@ -179,6 +179,7 @@ input_data = training_data["input_data"]
 labels = training_data["labels"]
 assert len(input_data[0]) == 694
 
+print("Building model..")
 if model_name == "model_1":
     model = build_model_1(input_data)
 elif model_name == "model_2":
@@ -195,14 +196,38 @@ elif model_name == "model_7":
     model = build_model_7(input_data)
 else:
     assert False
+print("Model built OK..")
 
-print("MODEL:", model_name)
-model.summary()
-tf.keras.utils.plot_model(model, "img/" + model_name + ".png", show_shapes=True)
+# model.summary()
+# tf.keras.utils.plot_model(model, "img/" + model_name + ".png", show_shapes=True)
 
-# fit the keras model on the dataset
-# Increase batch size in gpu !
-model.fit(input_data, labels, epochs=epochs, batch_size=batch_size)
+EPOCH_SAVE_INTERVAL = 100
+
+model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+    filepath=model_path,
+    save_weights_only=False,
+    monitor="accuracy",
+    mode="max",
+    save_best_only=True,
+    save_freq="epoch",
+    period=EPOCH_SAVE_INTERVAL,
+)
+
+SINGLE_FILE = True
+
+if SINGLE_FILE:
+    model.fit(input_data, labels, epochs=epochs, batch_size=batch_size, callbacks=[model_checkpoint_callback])
+else:
+    assert not BALANCED
+    data_files = listdir("data/nn_training_data")
+    for file in data_files:
+        file_path = "data/nn_training_data/" + file
+        print("File path", file_path)
+        with open(file_path, "rb") as f:
+            training_data = pickle.load(f)
+        input_data = training_data["input_data"]
+        labels = training_data["labels"]
+        model.fit(input_data, labels, epochs=epochs, batch_size=batch_size, callbacks=[model_checkpoint_callback])
 
 model.save(model_path)
 print("Saved model to disk")
