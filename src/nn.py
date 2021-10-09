@@ -121,17 +121,58 @@ def build_model_7(input_data):
     return model
 
 
-if len(sys.argv) < 4:
-    print("Not enough arguments. USAGE: <model_X> <Train/Eval> <epochs> <batch_size>")
+def eval_model(model_path, balanced):
+    if balanced:
+        data_path = "data/nn_val_data_balanced/nn_val_data-0.pkl"
+    else:
+        data_path = "data/nn_val_data/nn_val_data-0.pkl"
+
+    print(model_path)
+    model = tfk.models.load_model(model_path)
+    model.summary()
+
+    with open(data_path, "rb") as f:
+        val_data = pickle.load(f)
+
+    input_data = val_data["input_data"]
+    labels = val_data["labels"]
+    # evaluate the model
+    score = model.evaluate(input_data, labels, verbose=0)
+    print("%s: %.2f%%" % (model.metrics_names[1], score[1] * 100))
+
+    accuracy_of_always_false = ((len(labels) - np.count_nonzero(labels)) / len(labels)) * 100
+    print("Accuracy of always picking False:", accuracy_of_always_false, "%")
+
+
+if len(sys.argv) < 6:
+    print("Not enough arguments. USAGE: <model_X> <Train/Eval> <Raw/Balanced> <epochs> <batch_size>")
     exit()
 
+# TODO:::::::::::::::::::
 
+# LOAD CHUNKS INTO MEMORY !!!!!!!!!!!!!!
 model_name = str(sys.argv[1])
-assert str(sys.argv[2]) == "Train"
-epochs = int(sys.argv[3])  # 300
-batch_size = int(sys.argv[4])  # 64
+EVAL = str(sys.argv[2]) == "Eval"
+if not EVAL:
+    assert str(sys.argv[2]) == "Train"
+BALANCED = str(sys.argv[3]) == "Balanced"
+if not BALANCED:
+    assert str(sys.argv[3]) == "Raw"
+epochs = int(sys.argv[4])  # 300
+batch_size = int(sys.argv[5])  # 64
 
-with open("data/nn_training_data/nn_training_data-0.pkl", "rb") as f:
+model_path = "data/model/" + model_name + ".tf"
+
+if EVAL:
+    eval_model(model_path, BALANCED)
+    exit()
+
+if BALANCED:
+    data_path = "data/nn_training_data_balanced/nn_training_data-0.pkl"
+else:
+    data_path = "data/nn_training_data/nn_training_data-0.pkl"
+
+with open(data_path, "rb") as f:
     training_data = pickle.load(f)
 
 input_data = training_data["input_data"]
@@ -163,7 +204,7 @@ tf.keras.utils.plot_model(model, "img/" + model_name + ".png", show_shapes=True)
 # Increase batch size in gpu !
 model.fit(input_data, labels, epochs=epochs, batch_size=batch_size)
 
-model.save("data/" + model_name + ".h5")
+model.save(model_path)
 print("Saved model to disk")
 
 _, accuracy = model.evaluate(input_data, labels)
