@@ -1,9 +1,3 @@
-# Ver archivos:
-
-# /home/horacio/git/competition/Grid2Op/grid2op/Reward/AlarmReward.py
-# /home/horacio/git/competition/Grid2Op/grid2op/Reward/_AlarmScore.py
-# /home/horacio/git/competition/Grid2Op/grid2op/operator_attention/attention_budget.py
-
 import numpy as np
 import copy
 

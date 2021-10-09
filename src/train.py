@@ -624,6 +624,9 @@ if len(sys.argv) < 4:
     print("Not enough arguments. USAGE: <Eval/Train/EvalInTraining> <NumScenarios> <#cpus> <id_cpu>")
     exit()
 
+print("USAR EVAL.PY")
+assert False
+
 assert str(sys.argv[1]) == "Train" or str(sys.argv[1]) == "Eval" or str(sys.argv[1]) == "EvalInTraining"
 TRAIN = str(sys.argv[1]) == "Train"
 EVAL_TRAINING_DATA = str(sys.argv[1]) == "EvalInTraining"
