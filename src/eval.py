@@ -55,8 +55,6 @@ class Agent(BaseAgent):
         self.bus_actions_62_146 = np.concatenate((self.bus_actions62, self.bus_actions146), axis=0)
         self.all_actions = np.concatenate((self.do_nothing_action_vect, self.bus_actions_62_146), axis=0)
         self.previous_rho_for_alarm = None
-        self.timesteps_since_last_attack = -1
-        self.timesteps_since_ongoing_attack_started = -1
 
     def _reset_topology(self, observation):
         if np.max(observation.rho) < 0.95:
@@ -186,7 +184,7 @@ class Agent(BaseAgent):
         assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
         return combined_action
 
-    def extract_alarm_features(self, obs, info, under_attack):
+    def extract_alarm_features(self, obs):
         if self.previous_rho_for_alarm is None:
             feature_rho_delta = np.zeros_like(obs.rho)
         else:
@@ -211,19 +209,15 @@ class Agent(BaseAgent):
         feature_timestep_overflow = np.copy(obs.timestep_overflow)
         feature_time_before_cooldown_line = np.copy(obs.time_before_cooldown_line)
         feature_time_before_cooldown_sub = np.copy(obs.time_before_cooldown_sub)
-        feature_timesteps_since_last_attack = self.timesteps_since_last_attack
         feature_time_next_maintenance = np.copy(obs.time_next_maintenance)
-        feature_under_attack = under_attack
-        feature_attack_duration = info["opponent_attack_duration"]
-        feature_timesteps_since_ongoing_attack_started = self.timesteps_since_ongoing_attack_started
 
         processed_features = (
             np.concatenate(
                 (
-                    [feature_under_attack],
-                    [feature_attack_duration],
-                    [feature_timesteps_since_last_attack],
-                    [feature_timesteps_since_ongoing_attack_started],
+                    # [feature_under_attack],
+                    # [feature_attack_duration],
+                    # [feature_timesteps_since_last_attack],
+                    # [feature_timesteps_since_ongoing_attack_started],
                     feature_topo_vect,
                     feature_load_p,
                     feature_load_q,
@@ -249,6 +243,7 @@ class Agent(BaseAgent):
         )
 
         assert not np.isnan(processed_features).any()
+        assert len(processed_features) == 690
         return processed_features
 
     def act(self, observation, reward, done):
@@ -256,19 +251,6 @@ class Agent(BaseAgent):
 
         self._calc_sub_topo_dict(observation)
         current_time_step = env.nb_time_step
-        _, _, _, info = observation.simulate(self.do_nothing_action, time_step=0)
-
-        under_attack = info["opponent_attack_line"] is not None and len(info["opponent_attack_line"]) > 0
-
-        if under_attack:
-            self.timesteps_since_last_attack = 0
-            if self.timesteps_since_ongoing_attack_started == -1:
-                self.timesteps_since_ongoing_attack_started = 0
-            else:
-                self.timesteps_since_ongoing_attack_started += 1
-        else:
-            self.timesteps_since_last_attack += 1
-            self.timesteps_since_ongoing_attack_started = -1
 
         # ALARM >
         # TODOOOOOOOOOOOOOOOOOOOOOOOOOOOOO: VERIFICAR QUE ESTAN BIEN LOS FEATURES; VER QUE ESTEN EN EL MISMO ORDEN Y DEN LO MISMO QUE EN STORE_EPISODE_DATA
@@ -276,7 +258,7 @@ class Agent(BaseAgent):
         alarm_action = None
         alarm_is_legal = observation.attention_budget[0] >= 1.0
         if alarm_is_legal and observation.rho.max() > ALARM_RHO_THRESHOLD:
-            alarm_features = self.extract_alarm_features(observation, info, under_attack)
+            alarm_features = self.extract_alarm_features(observation)
             alarm_action = self.process_alarm_action(env, observation, alarm_features)
         self.previous_rho_for_alarm = observation.rho
         # < ALARM
@@ -374,8 +356,6 @@ if EVAL_TRAINING_DATA:
 else:
     env = env_val
 print("Total number of chronics:", len(env.chronics_handler.chronics_used))
-under_attack_count = 0
-not_under_attack_count = 0
 for i in range(number_of_scenarios):
     while episode_true_index < i * NUMBER_OF_CPUS + CPU_ID:
         env.reset()
@@ -411,7 +391,6 @@ for i in range(number_of_scenarios):
         act = agent.act(obs, reward, done)
         action_timestep = timestep
         obs, reward, done, info = env.step(act)
-        under_attack = info["opponent_attack_line"] is not None and len(info["opponent_attack_line"]) > 0
         timestep = env.nb_time_step
         if done:
             survived_timesteps.append(timestep)

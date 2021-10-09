@@ -27,7 +27,7 @@ def build_model_1(input_data):
     norm_layer.adapt(input_data)
     model = tfk.Sequential()
     model.add(norm_layer)
-    model.add(tfk.layers.Dense(460, input_dim=694, activation="relu"))
+    model.add(tfk.layers.Dense(460, input_dim=690, activation="relu"))
     model.add(tfk.layers.Dense(140, activation="relu"))
     model.add(tfk.layers.Dense(1, activation="sigmoid"))
     model.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
@@ -36,7 +36,7 @@ def build_model_1(input_data):
 
 def build_model_2(input_data):
     model = tfk.Sequential()
-    model.add(tfk.layers.Dense(460, input_dim=694, activation="relu"))
+    model.add(tfk.layers.Dense(460, input_dim=690, activation="relu"))
     model.add(tfk.layers.Dense(140, activation="relu"))
     model.add(tfk.layers.Dense(1, activation="sigmoid"))
     model.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
@@ -48,7 +48,7 @@ def build_model_3(input_data):
     norm_layer.adapt(input_data)
     model = tfk.Sequential()
     model.add(norm_layer)
-    model.add(tfk.layers.Dense(460, input_dim=694, activation="relu"))
+    model.add(tfk.layers.Dense(460, input_dim=690, activation="relu"))
     model.add(tfk.layers.Dense(200, activation="relu"))
     model.add(tfk.layers.Dense(60, activation="relu"))
     model.add(tfk.layers.Dense(1, activation="sigmoid"))
@@ -61,7 +61,7 @@ def build_model_4(input_data):
     norm_layer.adapt(input_data)
     model = tfk.Sequential()
     model.add(norm_layer)
-    model.add(tfk.layers.Dense(520, input_dim=694, activation="relu"))
+    model.add(tfk.layers.Dense(520, input_dim=690, activation="relu"))
     model.add(tfk.layers.Dense(360, activation="relu"))
     model.add(tfk.layers.Dense(180, activation="relu"))
     model.add(tfk.layers.Dense(40, activation="relu"))
@@ -75,7 +75,7 @@ def build_model_5(input_data):
     norm_layer.adapt(input_data)
     model = tfk.Sequential()
     model.add(norm_layer)
-    model.add(tfk.layers.Dense(520, input_dim=694))
+    model.add(tfk.layers.Dense(520, input_dim=690))
     model.add(tfk.layers.LeakyReLU(alpha="0.01"))
     model.add(tfk.layers.Dense(360))
     model.add(tfk.layers.LeakyReLU(alpha="0.01"))
@@ -94,7 +94,7 @@ def build_model_6(input_data):
     norm_layer.adapt(input_data)
     model = tfk.Sequential()
     model.add(norm_layer)
-    model.add(tfk.layers.Dense(520, input_dim=694, activation="relu"))
+    model.add(tfk.layers.Dense(520, input_dim=690, activation="relu"))
     model.add(tfk.layers.Dense(460, activation="relu"))
     model.add(tfk.layers.Dense(240, activation="relu"))
     model.add(tfk.layers.Dense(120, activation="relu"))
@@ -110,11 +110,11 @@ def build_model_7(input_data):
     norm_layer.adapt(input_data)
     model = tfk.Sequential()
     model.add(norm_layer)
-    model.add(tfk.layers.Dense(694, input_dim=694, activation="relu"))
-    model.add(tfk.layers.Dense(694, activation="relu"))
-    model.add(tfk.layers.Dense(694, activation="relu"))
+    model.add(tfk.layers.Dense(690, input_dim=690, activation="relu"))
+    model.add(tfk.layers.Dense(690, activation="relu"))
+    model.add(tfk.layers.Dense(690, activation="relu"))
     model.add(tf.keras.layers.Dropout(0.25))
-    model.add(tfk.layers.Dense(694, activation="relu"))
+    model.add(tfk.layers.Dense(690, activation="relu"))
     model.add(tf.keras.layers.Dropout(0.25))
     model.add(tfk.layers.Dense(1, activation="sigmoid"))
     model.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
@@ -177,7 +177,10 @@ with open(data_path, "rb") as f:
 
 input_data = training_data["input_data"]
 labels = training_data["labels"]
-assert len(input_data[0]) == 694
+
+if len(input_data[0]) == 694:
+    print("REMOVE ALARM FEATURES !!")
+assert len(input_data[0]) == 690
 
 print("Building model..")
 if model_name == "model_1":

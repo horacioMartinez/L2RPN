@@ -100,7 +100,7 @@ def chunks(lst, n):
         yield lst[i : i + n]
 
 
-if len(sys.argv) < 1:
+if len(sys.argv) < 3:
     print("Not enough arguments. USAGE: <Eval/Train> <NumScenarios (-1 for all)> <Raw/Balanced>")
     exit()
 
