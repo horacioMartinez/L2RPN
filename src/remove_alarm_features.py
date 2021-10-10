@@ -30,18 +30,21 @@ for feature_file in feature_files:
 
     input_data = training_data["input_data"]
     labels = training_data["labels"]
-    assert len(input_data[0] == 694)
+    assert len(input_data[0]) == 694
     new_input_data = []
-
+    print("Procesing file:", feature_file)
     for i in range(0, len(input_data)):
-        print(str(i) + "/" + str(len(input_data)))
         alarm_feature_indexes = [0, 1, 2, 3]
         new_input_data.append(np.delete(input_data[i], alarm_feature_indexes))
+    print(str(len(input_data)) + "/" + str(len(input_data)))
     new_input_data = np.array(new_input_data)
-    assert len(new_input_data[0] == 690)
+    assert len(new_input_data[0]) == 690
     training_data["input_data"] = new_input_data
+    del input_data
+    gc.collect()
     print("Saving new feature file:", feature_file)
     with open(feature_file, "wb") as f:
         pickle.dump(training_data, f, pickle.HIGHEST_PROTOCOL)
+
 
 print("FINISH!")

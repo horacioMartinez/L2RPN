@@ -20,6 +20,8 @@ from grid2op.Reward.BaseReward import BaseReward
 from grid2op.Reward import RedispReward
 from grid2op.Agent import BaseAgent
 from alarm import Alarm
+import tensorflow as tf
+import tensorflow.keras as tfk
 
 # Podemos poner como reward cuanto aumenta el rho 7 episodios despues de sonar la alarma.
 # O sera, que tan cerca esta de game over ??
@@ -29,12 +31,20 @@ from alarm import Alarm
 np.set_printoptions(suppress=True)
 
 
-def nn_alarm_action(timestep, last_alarm_trigger_timestep, feature_last_timestep_rho, env, features):
+def nn_alarm_action(timestep, last_alarm_trigger_timestep, env, feature_last_timestep_rho, features):
     assert timestep >= last_alarm_trigger_timestep
-
-    # feature_actions_rho = features["actions_rho"]
     feature_rho = features["rho"]
-    feature_line_status = features["line_status"]
+    if feature_rho.max() < 0.9:
+        return None
+    # feature_actions_rho = features["actions_rho"]
+    feature_topo_vect = features["topo_vect"]
+    feature_load_p = features["load_p"]
+    feature_load_q = features["load_q"]
+    feature_load_v = features["load_v"]
+    feature_gen_p = features["gen_p"]
+    feature_gen_q = features["gen_q"]
+    feature_gen_v = features["gen_v"]
+    feature_time_before_cooldown_line = features["time_before_cooldown_line"]
     feature_month = features["month"]
     feature_day = features["day"]
     feature_day_of_week = features["day_of_week"]
@@ -43,21 +53,45 @@ def nn_alarm_action(timestep, last_alarm_trigger_timestep, feature_last_timestep
     feature_timestep_overflow = features["timestep_overflow"]
     feature_time_before_cooldown_line = features["time_before_cooldown_line"]
     feature_time_before_cooldown_sub = features["time_before_cooldown_sub"]
-    features_timesteps_since_last_attack = features["timesteps_since_last_attack"]
     feature_time_next_maintenance = features["time_next_maintence"]
-    feature_under_attack = features["under_attack"]
-    feature_attack_duration = features["opponent_attack_duration"]
-    feature_timesteps_since_ongoing_attack_started = features["timesteps_since_ongoing_attack_started"]
 
     if feature_last_timestep_rho is None:
-        feature_rho_difference = np.zeros_like(feature_rho)
+        feature_rho_delta = np.zeros_like(feature_rho)
     else:
-        feature_rho_difference = feature_last_timestep_rho - feature_rho
+        feature_rho_delta = feature_last_timestep_rho - feature_rho
+    processed_features = (
+        np.concatenate(
+            (
+                # [feature_under_attack],
+                # [feature_attack_duration],
+                # [feature_timesteps_since_last_attack],
+                # [feature_timesteps_since_ongoing_attack_started],
+                feature_topo_vect,
+                feature_load_p,
+                feature_load_q,
+                feature_load_v,
+                feature_gen_p,
+                feature_gen_q,
+                feature_gen_v,
+                feature_rho,
+                feature_rho_delta,
+                feature_timestep_overflow,
+                feature_time_before_cooldown_line,
+                feature_time_before_cooldown_sub,
+                feature_time_next_maintenance,
+                [feature_month],
+                [feature_day],
+                [feature_day_of_week],
+                [feature_hour_of_day],
+                [feature_minute_of_hour],
+            )
+        )
+        .flatten()
+        .astype(np.float32)
+    )
 
-    # Limit timesteps to 10 (because 11 is the max timesteps the alarm can wait to have a positive score)
-    feature_time_before_cooldown_line[feature_time_before_cooldown_line > 10] = 11
-    feature_time_before_cooldown_sub[feature_time_before_cooldown_sub > 10] = 11
-    feature_time_next_maintenance[feature_time_next_maintenance > 10] = 99
+    prediction = model.predict(np.array([processed_features]))[0]
+    print("ALARM PREDICTION:", prediction)
 
     return None
 
@@ -81,11 +115,16 @@ def naive_alarm_action(timestep, last_alarm_trigger_timestep, env, rho):
     return alarm_action
 
 
-if len(sys.argv) < 1:
-    print("Not enough arguments. USAGE: <NumScenarios>")
+if len(sys.argv) < 2:
+    print("Not enough arguments. USAGE: <NumScenarios> <model_name>")
     exit()
 
 number_of_scenarios = int(sys.argv[1])
+
+model_name = str(sys.argv[2])
+if model_name != "naive":
+    model = tfk.models.load_model(os.path.join("./data/model/" + model_name + ".tf"))
+
 
 SEED = 0
 random.seed(SEED)
@@ -194,36 +233,10 @@ for episode_data in episodes_data:
             if last_timestep_data["timestep"] == timestep - 1:
                 feature_last_timestep_rho = last_timestep_data["features"]["rho"]
 
-        feature_timestep = features["timestep"]
-        feature_disc_lines_before_cascade = features["disc_lines_before_cascade"]
-        feature_actions_rho = features["actions_rho"]
-        feature_rho = features["rho"]
-        feature_topo_vect = features["topo_vect"]
-        feature_line_status = features["line_status"]
-        feature_load_p = features["load_p"]
-        feature_load_q = features["load_q"]
-        feature_load_v = features["load_v"]
-        feature_gen_p = features["gen_p"]
-        feature_gen_q = features["gen_q"]
-        feature_gen_v = features["gen_v"]
-        feature_year = features["year"]
-        feature_month = features["month"]
-        feature_day = features["day"]
-        feature_day_of_week = features["day_of_week"]
-        feature_hour_of_day = features["hour_of_day"]
-        feature_minute_of_hour = features["minute_of_hour"]
-        feature_timestep_overflow = features["timestep_overflow"]
-        feature_time_before_cooldown_line = features["time_before_cooldown_line"]
-        feature_time_before_cooldown_sub = features["time_before_cooldown_sub"]
-        features_timesteps_since_last_attack = features["timesteps_since_last_attack"]
-        feature_time_next_maintenance = features["time_next_maintence"]
-        feature_under_attack = features["under_attack"]
-        feature_attack_duration = features["opponent_attack_duration"]
-        feature_timesteps_since_ongoing_attack_started = features["timesteps_since_ongoing_attack_started"]
-
         alarm_is_legal = alarm.budget >= alarm.alarm_cost
         valid_actions = []
         raise_alarm_vect = None
+        rho = features["rho"]
         if alarm_is_legal:
             valid_actions = [
                 env.action_space({"raise_alarm": 0}),
@@ -232,8 +245,12 @@ for episode_data in episodes_data:
             ]
             # alarm_action = None
             # alarm_action = valid_actions[0]
-            alarm_action = naive_alarm_action(timestep, last_alarm_trigger_timestep, env, feature_rho)
-            # alarm_action = nn_alarm_action(                timestep, last_alarm_trigger_timestep, feature_last_timestep_rho, env, features            )
+            if model_name == "naive":
+                alarm_action = naive_alarm_action(timestep, last_alarm_trigger_timestep, env, rho)
+            else:
+                alarm_action = nn_alarm_action(
+                    timestep, last_alarm_trigger_timestep, env, feature_last_timestep_rho, features
+                )
             # alarm_action = None
             if alarm_action != None:
                 raise_alarm_vect = alarm_action.raise_alarm

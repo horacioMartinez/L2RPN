@@ -19,6 +19,8 @@ from grid2op.Environment import SingleEnvMultiProcess
 from grid2op.Reward.BaseReward import BaseReward
 from grid2op.Reward import RedispReward
 from grid2op.Agent import BaseAgent
+import tensorflow as tf
+import tensorflow.keras as tfk
 from scipy.optimize.optimize import bracket
 from alarm import Alarm
 
@@ -50,10 +52,14 @@ class Agent(BaseAgent):
         self.do_nothing_action = action_space({})
 
         self.do_nothing_action_vect = np.array([self.do_nothing_action.to_vect()])
-        self.bus_actions62 = np.load(os.path.join("./data/bus_actions62_2021.npy"))
-        self.bus_actions146 = np.load(os.path.join("./data/bus_actions146_2021.npy"))
+        self.bus_actions62 = np.load(os.path.join(this_directory_path, "data/bus_actions62_2021.npy"))
+        self.bus_actions146 = np.load(os.path.join(this_directory_path, "data/bus_actions146_2021.npy"))
         self.bus_actions_62_146 = np.concatenate((self.bus_actions62, self.bus_actions146), axis=0)
         self.all_actions = np.concatenate((self.do_nothing_action_vect, self.bus_actions_62_146), axis=0)
+
+        model_name = "model_2-balanced"
+        self.model = tfk.models.load_model(os.path.join(this_directory_path, "data/model/" + model_name + ".tf"))
+
         self.previous_rho_for_alarm = None
 
     def _reset_topology(self, observation):
@@ -155,19 +161,6 @@ class Agent(BaseAgent):
             return True
         return self.is_legal_bus_action(action, observation)
 
-    def process_alarm_action(self, env, observation, alarm_features):
-        alarms_lines_area = env.alarms_lines_area
-        alarms_area_names = env.alarms_area_names
-        zone_for_each_lines = alarms_lines_area
-        line_most_overloaded = np.argmax(observation.rho)
-        line_name = observation.name_line[line_most_overloaded]
-        # Some lines are in more than one area, which one to chose ?
-        zone_name = zone_for_each_lines[line_name][0]
-        #'east' = 0, 'middle' = 1, 'west' = 2
-        zone_index = [alarms_area_names.index(zone_name)]
-        alarm_action = self.action_space({"raise_alarm": zone_index})
-        return alarm_action
-
     def combine_actions(self, actionA, actionB, observation):
         if actionA == None:
             return actionB
@@ -183,6 +176,23 @@ class Agent(BaseAgent):
         observation._obs_env._reset_to_orig_state()
         assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
         return combined_action
+
+    def process_alarm_action(self, env, observation, alarm_features):
+        alarms_lines_area = env.alarms_lines_area
+        alarms_area_names = env.alarms_area_names
+        zone_for_each_lines = alarms_lines_area
+        line_most_overloaded = np.argmax(observation.rho)
+        line_name = observation.name_line[line_most_overloaded]
+        # Some lines are in more than one area, which one to chose ?
+        zone_name = zone_for_each_lines[line_name][0]
+        #'east' = 0, 'middle' = 1, 'west' = 2
+        zone_index = [alarms_area_names.index(zone_name)]
+        alarm_action = self.action_space({"raise_alarm": zone_index})
+
+        prediction = self.model.predict(np.array([alarm_features]))[0]
+        print("ALARM PREDICTION:", prediction)
+
+        return alarm_action
 
     def extract_alarm_features(self, obs):
         if self.previous_rho_for_alarm is None:
@@ -258,6 +268,7 @@ class Agent(BaseAgent):
         alarm_action = None
         alarm_is_legal = observation.attention_budget[0] >= 1.0
         if alarm_is_legal and observation.rho.max() > ALARM_RHO_THRESHOLD:
+            print("Timestep:", current_time_step)
             alarm_features = self.extract_alarm_features(observation)
             alarm_action = self.process_alarm_action(env, observation, alarm_features)
         self.previous_rho_for_alarm = observation.rho

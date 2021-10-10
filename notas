@@ -600,3 +600,195 @@ Overflows are divided into two categories:
 number_of_alarm_failures_due_to_no_info_in_previous_timesteps
 
 con 0.7 de rho tenemos 9% de los scenarios donde no visitamos el timestep 7 posiciones anterior al game over!
+
+
+
+
+
+
+
+
+
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+>>>>>>>>>>>>> RECTA FINAL >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+PLAN:
+
+> ~100k de episodios guardados.
+
+Instancia aws:
+p3.2xlarge
+61 gb de ram
+
+Entonces hagamos que tome chunks de 50 gb de memoria max
+
+1000 episodios: 
+
+- 
+-53 GB de ram para procesarlos
+- 3,2 GB de data generada
+
+
+=> 100k episodios:
+
+320 GB data generada
+
+
+Hacer chunks de a 10.000 scenarios
+Tenemos 112768 episodios guardados (de train data) en ec2
+
+
+-> 100k episodios, 10 datos positivos => 1 millon de datos True
+-> 8050 datos negativos => 800 millones de datos False
+
+> LARGO de features: 694
+
+
+
+python3 store_episode_data.py Eval 200 10 0 1000
+
+
+
+Numero de neurons below:
+
+# Neurons = 500.000.000/(alpha*(694+1))
+
+2<= alpha<= 10
+
+alpha = 5, entonces:
+
+# Neurons = 500.000.000/(alpha*(694+1))
+
+143k neurons !
+
+
+Three hidden layers, cada una con:
+
+2/3 de los inputs de entrada.
+
+Entonces tendriamos
+
+460 neurons en 3 layers distintas.
+
+
+
+
+Instalar:
+
+$ sudo apt install -y git make screen htop unzip python python3 zsh websockify zip gcc g++ vim awscli python3-pip
+$ aws s3 cp s3://l2rpn142 . --recursive
+$ sudo apt install nvidia-cuda-toolkit
+$ pip install grid2op==1.6.3
+$ pip install tensorflow==2.5.0
+$ pip install numpy==1.18.4
+
+
+Copiar archivos:
+$ scp -ri /home/horacio/Desktop/cfr.pem /home/horacio/git/competition/L2RPN/src/remove_alarm_features.py root@66.228.38.115:/home/ubuntu/src
+$ scp -ri /home/horacio/Desktop/cfr.pem /home/horacio/git/competition/L2RPN/src/nn.py root@66.228.38.115:/home/ubuntu/src
+
+
+Remove alarm features:
+python3 remove_alarm_features.py data/nn_val_data/ && python3 remove_alarm_features.py data/nn_training_data/ && python3 remove_alarm_features.py data/nn_training_data_balanced/ && python3 remove_alarm_features.py data/nn_val_data_balanced/
+
+$ python3 remove_alarm_features.py data/nn_val_data/ 
+$ python3 remove_alarm_features.py data/nn_training_data/ 
+$ python3 remove_alarm_features.py data/nn_training_data_balanced/ 
+$ python3 remove_alarm_features.py data/nn_val_data_balanced/
+
+Verificar CUDA:
+nvcc -V
+
+CUDA:
+
+wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin
+sudo mv cuda-ubuntu2004.pin /etc/apt/preferences.d/cuda-repository-pin-600
+sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub
+sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"
+sudo apt update
+sudo apt install -y nvidia-kernel-source-455
+sudo apt install -y nvidia-dkms-455
+sudo apt install -y nvidia-driver-455
+sudo apt install -y cuda-drivers-455
+sudo apt install -y cuda-runtime-11-1
+sudo apt install -y cuda-11-1
+echo 'export PATH=/usr/local/cuda-11.1/bin${PATH:+:${PATH}}' >> $HOME/.bashrc
+
+REQUIRE REINICIAR.
+
+Instalar cudnn:
+
+$ scp -ri /home/horacio/Desktop/cfr.pem /home/horacio/git/competition/L2RPN/src/cudnn-11.4-linux-x64-v8.2.4.15.tgz root@66.228.38.115:/home/ubuntu/src/temp
+$ tar -xzvf cudnn-11.4-linux-x64-v8.2.4.15.tgz
+$ sudo cp cuda/include/cudnn*.h /usr/local/cuda/include
+$ sudo cp cuda/lib64/libcudnn* /usr/local/cuda/lib64
+$ sudo chmod a+r /usr/local/cuda/include/cudnn*.h /usr/local/cuda/lib64/libcudnn*
+
+
+Ver utilizacion GPU:
+$ nvidia-smi -l 3
+
+
+RUNS:
+
+15:32
+$ python3 nn.py model_1 Train Balanced 100 256
+16:01
+$ python3 nn.py model_1 Eval Balanced 0 0
+accuracy: 80.56%
+Accuracy of always picking False: 52.04780602447623 %
+
+$ time python3 nn.py model_2 Train Balanced 100 256
+real    27m22.008s
+$ python3 nn.py model_2 Eval Balanced 0 0
+accuracy: 82.32%
+Accuracy of always picking False: 52.04780602447623 %
+
+
+Da mejor sin normalizar que normalizando !!!.
+
+Valdra para los otros modelos tambien??
+
+Probamos model_6 vs model_66 ( y Raw en vez de Balanced)
+
+Buscamos que tarde 2hs cada uno.
+16:38
+$ time python3 nn.py model_6 Train Raw 1000 128
+18:30 (70 epochs)
+real    109m5.733s
+$ python3 nn.py model_6 Eval Raw 0 0
+accuracy: 99.39%
+Accuracy of always picking False: 99.45538492186722 %
+~18:40
+$ time python3 nn.py model_66 Train Raw 1000 128
+real    104m14.710s
+$ python3 nn.py model_66 Eval Raw 0 0
+accuracy: 99.56%
+Accuracy of always picking False: 99.45538492186722 %
+
+
+-----------> Entonces hagamos que directamente use sin normalizar !
+
+-----------> USAMOS BALANCED. (Igual voy a usar pocas iteraciones con 1 solo archivo, asi que no ahce falta usar el otro)
+
+Probamos:
+con 2hs de tiempo de entrenamiento
+
+model_1
+model_3
+model_4
+model_5
+model_6
+model_7
+
+model_7:
+$ time python3 nn.py model_7 Train Balanced 1000 128

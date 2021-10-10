@@ -44,10 +44,7 @@ def build_model_2(input_data):
 
 
 def build_model_3(input_data):
-    norm_layer = Normalization()
-    norm_layer.adapt(input_data)
     model = tfk.Sequential()
-    model.add(norm_layer)
     model.add(tfk.layers.Dense(460, input_dim=690, activation="relu"))
     model.add(tfk.layers.Dense(200, activation="relu"))
     model.add(tfk.layers.Dense(60, activation="relu"))
@@ -57,10 +54,7 @@ def build_model_3(input_data):
 
 
 def build_model_4(input_data):
-    norm_layer = Normalization()
-    norm_layer.adapt(input_data)
     model = tfk.Sequential()
-    model.add(norm_layer)
     model.add(tfk.layers.Dense(520, input_dim=690, activation="relu"))
     model.add(tfk.layers.Dense(360, activation="relu"))
     model.add(tfk.layers.Dense(180, activation="relu"))
@@ -71,10 +65,7 @@ def build_model_4(input_data):
 
 
 def build_model_5(input_data):
-    norm_layer = Normalization()
-    norm_layer.adapt(input_data)
     model = tfk.Sequential()
-    model.add(norm_layer)
     model.add(tfk.layers.Dense(520, input_dim=690))
     model.add(tfk.layers.LeakyReLU(alpha="0.01"))
     model.add(tfk.layers.Dense(360))
@@ -90,10 +81,7 @@ def build_model_5(input_data):
 
 
 def build_model_6(input_data):
-    norm_layer = Normalization()
-    norm_layer.adapt(input_data)
     model = tfk.Sequential()
-    model.add(norm_layer)
     model.add(tfk.layers.Dense(520, input_dim=690, activation="relu"))
     model.add(tfk.layers.Dense(460, activation="relu"))
     model.add(tfk.layers.Dense(240, activation="relu"))
@@ -106,10 +94,7 @@ def build_model_6(input_data):
 
 def build_model_7(input_data):
     # PPO
-    norm_layer = Normalization()
-    norm_layer.adapt(input_data)
     model = tfk.Sequential()
-    model.add(norm_layer)
     model.add(tfk.layers.Dense(690, input_dim=690, activation="relu"))
     model.add(tfk.layers.Dense(690, activation="relu"))
     model.add(tfk.layers.Dense(690, activation="relu"))
@@ -147,6 +132,11 @@ def eval_model(model_path, balanced):
 if len(sys.argv) < 6:
     print("Not enough arguments. USAGE: <model_X> <Train/Eval> <Raw/Balanced> <epochs> <batch_size>")
     exit()
+
+print("Num GPUs Available: ", len(tf.config.list_physical_devices("GPU")))
+gpu = tf.test.is_gpu_available(cuda_only=True)
+assert gpu
+
 
 model_name = str(sys.argv[1])
 EVAL = str(sys.argv[2]) == "Eval"
@@ -204,7 +194,7 @@ print("Model built OK..")
 # model.summary()
 # tf.keras.utils.plot_model(model, "img/" + model_name + ".png", show_shapes=True)
 
-EPOCH_SAVE_INTERVAL = 100
+EPOCH_SAVE_INTERVAL = 5
 
 model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
     filepath=model_path,
@@ -216,24 +206,29 @@ model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
     period=EPOCH_SAVE_INTERVAL,
 )
 
-SINGLE_FILE = True
-
+if BALANCED:
+    SINGLE_FILE = True
+else:
+    SINGLE_FILE = False
 if SINGLE_FILE:
     model.fit(input_data, labels, epochs=epochs, batch_size=batch_size, callbacks=[model_checkpoint_callback])
 else:
     assert not BALANCED
+    print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> USING MULTIPLE FILES")
     data_files = listdir("data/nn_training_data")
-    for file in data_files:
-        file_path = "data/nn_training_data/" + file
-        print("File path", file_path)
-        with open(file_path, "rb") as f:
-            training_data = pickle.load(f)
-        input_data = training_data["input_data"]
-        labels = training_data["labels"]
-        model.fit(input_data, labels, epochs=epochs, batch_size=batch_size, callbacks=[model_checkpoint_callback])
+    assert epochs < 101
+    for i in range(0, 999999):
+        for file in data_files:
+            file_path = "data/nn_training_data/" + file
+            print("File path", file_path)
+            with open(file_path, "rb") as f:
+                training_data = pickle.load(f)
+            input_data = training_data["input_data"]
+            labels = training_data["labels"]
+            model.fit(input_data, labels, epochs=epochs, batch_size=batch_size, callbacks=[model_checkpoint_callback])
 
 model.save(model_path)
 print("Saved model to disk")
 
-_, accuracy = model.evaluate(input_data, labels)
-print("Accuracy: %.2f" % (accuracy * 100))
+# _, accuracy = model.evaluate(input_data, labels)
+# print("Accuracy: %.2f" % (accuracy * 100))
