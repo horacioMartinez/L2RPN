@@ -1,5 +1,4 @@
 src/utils
-src/submission
 src/input_data_local
 src/data
 src/data/buckets.pkl
