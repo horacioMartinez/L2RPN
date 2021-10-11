@@ -31,7 +31,9 @@ import tensorflow.keras as tfk
 np.set_printoptions(suppress=True)
 
 
-def nn_alarm_action(timestep, last_alarm_trigger_timestep, env, feature_last_timestep_rho, features):
+def nn_alarm_action(
+    timestep, last_alarm_trigger_timestep, env, feature_last_timestep_rho, features, disc_lines_before_cascade
+):
     assert timestep >= last_alarm_trigger_timestep
     feature_rho = features["rho"]
     some_line_disconnected = not np.all(features["topo_vect"] != -1)
@@ -98,21 +100,40 @@ def nn_alarm_action(timestep, last_alarm_trigger_timestep, env, feature_last_tim
     return None
 
 
-def naive_alarm_action(timestep, last_alarm_trigger_timestep, env, rho):
+def calculate_zone_for_alarm(env, rho, disc_lines_before_cascade):
+    alarms_lines_area = env.alarms_lines_area
+    alarms_area_names = env.alarms_area_names
+    zone_for_each_lines = alarms_lines_area
+
+    ####### from disc_lines_before_cascade
+    combined_disc_lines_before_cascade = np.concatenate(disc_lines_before_cascade).astype(int)
+    if len(combined_disc_lines_before_cascade) > 0:
+        print("disc_lines_before_cascade:", disc_lines_before_cascade)
+        print("combined_disc_lines_before_cascade:", combined_disc_lines_before_cascade)
+        last_disconnected_line = combined_disc_lines_before_cascade[len(combined_disc_lines_before_cascade) - 1]
+        print("last_disconnected_line:", last_disconnected_line)
+        line_name = env.name_line[last_disconnected_line]
+        zone_name = zone_for_each_lines[line_name][0]
+        zone_index = [alarms_area_names.index(zone_name)]
+        return zone_index
+    ########
+
+    # From line most overloaded
+    line_most_overloaded = np.argmax(rho)
+    line_name = env.name_line[line_most_overloaded]
+    zone_name = zone_for_each_lines[line_name][0]
+    zone_index = [alarms_area_names.index(zone_name)]
+    return zone_index
+
+
+def naive_alarm_action(timestep, last_alarm_trigger_timestep, env, rho, disc_lines_before_cascade):
     assert timestep >= last_alarm_trigger_timestep
     if rho.max() < 1.1:
         return None
     if timestep - last_alarm_trigger_timestep < 7:
         return None
-    alarms_lines_area = env.alarms_lines_area
-    alarms_area_names = env.alarms_area_names
-    zone_for_each_lines = alarms_lines_area
-    line_most_overloaded = np.argmax(rho)
-    line_name = env.name_line[line_most_overloaded]
-    # Some lines are in more than one area, which one to chose ?
-    zone_name = zone_for_each_lines[line_name][0]
-    #'east' = 0, 'middle' = 1, 'west' = 2
-    zone_index = [alarms_area_names.index(zone_name)]
+
+    zone_index = calculate_zone_for_alarm(env, rho, disc_lines_before_cascade)
     alarm_action = env.action_space({"raise_alarm": zone_index})
     return alarm_action
 
@@ -228,6 +249,7 @@ for episode_data in episodes_data:
             continue
         # Not done
         features = timestep_data["features"]
+        disc_lines_before_cascade = features["disc_lines_before_cascade"]
 
         feature_last_timestep_rho = None
         if current_data_index > 0:
@@ -248,10 +270,17 @@ for episode_data in episodes_data:
             # alarm_action = None
             # alarm_action = valid_actions[0]
             if model_name == "naive":
-                alarm_action = naive_alarm_action(timestep, last_alarm_trigger_timestep, env, rho)
+                alarm_action = naive_alarm_action(
+                    timestep, last_alarm_trigger_timestep, env, rho, disc_lines_before_cascade
+                )
             else:
                 alarm_action = nn_alarm_action(
-                    timestep, last_alarm_trigger_timestep, env, feature_last_timestep_rho, features
+                    timestep,
+                    last_alarm_trigger_timestep,
+                    env,
+                    feature_last_timestep_rho,
+                    features,
+                    disc_lines_before_cascade,
                 )
             # alarm_action = None
             if alarm_action != None:

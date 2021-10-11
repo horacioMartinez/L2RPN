@@ -816,4 +816,90 @@ Corro model_3, model_2 y model_1 que son los que falta con ~60 min cada uno
 
 (05:51)
 $ time python3 nn.py model_3 Train Balanced 9999 128
+real    57m6.123s -> 105 epochs
+(06:48)
+$ time python3 nn.py model_2 Train Balanced 9999 128
+real  54m12.998s
+(07:45)
+$ time python3 nn.py model_1 Train Balanced 105 128
 
+
+$ python3.9 eval_alarm.py 1000 naive 
+
+Average alarm score: -2.552957359009629
+Ahora con disc_lines_before_cascade:
+Average alarm score: -2.3713892709766164
+
+disc_lines_before_cascade parece funcionar ok.
+
+
+Corremos evaluacion:
+
+$ time python3 nn.py model_1 Eval Balanced 0 0
+accuracy: 80.83%
+Accuracy of always picking False: 52.04780602447623 %
+
+real    0m11.806s
+user    0m7.183s
+sys     0m7.163s
+
+
+$ time python3 nn.py model_2 Eval Balanced 0 0
+
+accuracy: 82.26%
+Accuracy of always picking False: 52.04780602447623 %
+
+real    0m8.874s
+user    0m6.699s
+sys     0m4.650s
+
+$ time python3 nn.py model_3 Eval Balanced 0 0
+accuracy: 82.70%
+Accuracy of always picking False: 52.04780602447623 %
+
+real    0m9.180s
+user    0m7.040s
+sys     0m4.705s
+
+$ time python3 nn.py model_4 Eval Balanced 0 0
+accuracy: 82.79%
+Accuracy of always picking False: 52.04780602447623 %
+
+real    0m8.409s
+user    0m6.981s
+sys     0m3.922s
+
+$ time python3 nn.py model_5 Eval Balanced 0 0
+accuracy: 81.60%
+Accuracy of always picking False: 52.04780602447623 %
+
+real    0m8.786s
+user    0m7.360s
+sys     0m4.100s
+
+$ time python3 nn.py model_6 Eval Balanced 0 0
+accuracy: 82.41%
+Accuracy of always picking False: 52.04780602447623 %
+
+real    0m8.864s
+user    0m7.065s
+sys     0m4.293s
+
+$ time python3 nn.py model_7 Eval Balanced 0 0
+accuracy: 82.17%
+Accuracy of always picking False: 52.04780602447623 %
+
+real    0m8.511s
+user    0m6.891s
+sys     0m4.124s
+
+>>>>>> model_4 parece el mejor, pero corrio por un poco mas de tiempo que los demas.
+
+>>> model_6 quizas ganaria si lo dejo correr mas tiempo ?? probamos !!
+>>> TAMBIEN PROBAR CON model_3 !!!!!!!!!!!
+
+$ time python3 nn.py model_6 Eval Balanced 0 0
+
+
+
+Despues dejarlo corriendo con batch_size 64 y usamos la de amazon para dejar corriendo mismo modelo pero con Raw en vez de Balanced
