@@ -170,7 +170,6 @@ class MyAgent(BaseAgent):
         combined_disc_lines_before_cascade = np.concatenate(self.disc_lines_before_cascade).astype(int)
         if len(combined_disc_lines_before_cascade) > 0:
             last_disconnected_line = combined_disc_lines_before_cascade[len(combined_disc_lines_before_cascade) - 1]
-            print("last_disconnected_line:", last_disconnected_line)
             line_name = env.name_line[last_disconnected_line]
             zone_name = zone_for_each_lines[line_name][0]
             zone_index = [alarms_area_names.index(zone_name)]
@@ -192,7 +191,7 @@ class MyAgent(BaseAgent):
             return None
 
         zone_index = self.calculate_zone_for_alarm(env, rho)
-        alarm_action = env.action_space({"raise_alarm": zone_index})
+        alarm_action = self.action_space({"raise_alarm": zone_index})
         return alarm_action
 
     def nn_alarm_action(self, current_time_step, env, observation):
