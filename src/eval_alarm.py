@@ -34,8 +34,10 @@ np.set_printoptions(suppress=True)
 def nn_alarm_action(timestep, last_alarm_trigger_timestep, env, feature_last_timestep_rho, features):
     assert timestep >= last_alarm_trigger_timestep
     feature_rho = features["rho"]
-    if feature_rho.max() < 0.9:
+    some_line_disconnected = not np.all(features["topo_vect"] != -1)
+    if feature_rho.max() < 0.9 or not some_line_disconnected:
         return None
+
     # feature_actions_rho = features["actions_rho"]
     feature_topo_vect = features["topo_vect"]
     feature_load_p = features["load_p"]

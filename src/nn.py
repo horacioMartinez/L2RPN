@@ -68,6 +68,7 @@ def build_model_5(input_data):
     model = tfk.Sequential()
     model.add(tfk.layers.Dense(520, input_dim=690))
     model.add(tfk.layers.LeakyReLU(alpha="0.01"))
+    model.add(tfk.layers.BatchNormalization())
     model.add(tfk.layers.Dense(360))
     model.add(tfk.layers.LeakyReLU(alpha="0.01"))
     model.add(tfk.layers.Dense(180))

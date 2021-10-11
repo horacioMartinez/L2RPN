@@ -261,20 +261,19 @@ class Agent(BaseAgent):
 
         self._calc_sub_topo_dict(observation)
         current_time_step = env.nb_time_step
+        some_line_disconnected = not np.all(observation.topo_vect != -1)
 
         # ALARM >
         # TODOOOOOOOOOOOOOOOOOOOOOOOOOOOOO: VERIFICAR QUE ESTAN BIEN LOS FEATURES; VER QUE ESTEN EN EL MISMO ORDEN Y DEN LO MISMO QUE EN STORE_EPISODE_DATA
         # TODOOOOOOOOOOOOOOOOOOOOOOOOOOOOO: VERIFICAR QUE ESTAN BIEN LOS FEATURES; VER QUE ESTEN EN EL MISMO ORDEN Y DEN LO MISMO QUE EN STORE_EPISODE_DATA
         alarm_action = None
         alarm_is_legal = observation.attention_budget[0] >= 1.0
-        if alarm_is_legal and observation.rho.max() > ALARM_RHO_THRESHOLD:
+        if alarm_is_legal and (observation.rho.max() > ALARM_RHO_THRESHOLD or some_line_disconnected):
             print("Timestep:", current_time_step)
             alarm_features = self.extract_alarm_features(observation)
             alarm_action = self.process_alarm_action(env, observation, alarm_features)
         self.previous_rho_for_alarm = observation.rho
         # < ALARM
-
-        some_line_disconnected = not np.all(observation.topo_vect != -1)
 
         if some_line_disconnected:
             # TODO: Mix reconnect action with other actions ??

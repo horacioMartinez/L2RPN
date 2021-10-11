@@ -791,4 +791,29 @@ model_6
 model_7
 
 model_7:
+20:30 hasta 22:30
 $ time python3 nn.py model_7 Train Balanced 1000 128
+real    114m35.550s
+
+Dejamos corriendo 6 y 5 y 4:
+
+80 iteraciones de 6 son 2 hs.
+Asumo que 80 de 5 tambien son 2 hs.
+Dejo corriendo el de 4 hasta 120 por las dudas
+
+$ time python3 nn.py model_6 Train Balanced 80 128 && time python3 nn.py model_5 Train Balanced 80 128 && time python3 nn.py model_4 Train Balanced 120 128
+
+Al final tardaron mucho menos que lo anterior proqeu con balanced tarda menos:
+
+model_6: (80 epochs)
+real    50m22.661s
+model_5: (80 epochs)
+real    57m11.993s
+model_4: (120 epochs)
+real    71m14.763s
+
+Corro model_3, model_2 y model_1 que son los que falta con ~60 min cada uno
+
+(05:51)
+$ time python3 nn.py model_3 Train Balanced 9999 128
+
