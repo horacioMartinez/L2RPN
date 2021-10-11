@@ -146,7 +146,7 @@ number_of_scenarios = int(sys.argv[1])
 
 model_name = str(sys.argv[2])
 if model_name != "naive":
-    model = tfk.models.load_model(os.path.join("./data/model/" + model_name + ".tf"))
+    model = tfk.models.load_model(os.path.join("./data/model/" + model_name + ".h5"))
 
 
 SEED = 0

@@ -895,11 +895,23 @@ sys     0m4.124s
 
 >>>>>> model_4 parece el mejor, pero corrio por un poco mas de tiempo que los demas.
 
+******************
+
 >>> model_6 quizas ganaria si lo dejo correr mas tiempo ?? probamos !!
 >>> TAMBIEN PROBAR CON model_3 !!!!!!!!!!!
 
-$ time python3 nn.py model_6 Eval Balanced 0 0
-
-
+$ time python3 nn.py model_6 Train Balanced 120 128
+> accuracy: 82.41%
+$ time python3 nn.py model_3 Train Balanced 120 128
+$ time python3 nn.py model_3 Eval Balanced 0 0
+> accuracy: 82.38%
 
 Despues dejarlo corriendo con batch_size 64 y usamos la de amazon para dejar corriendo mismo modelo pero con Raw en vez de Balanced
+
+model_4 es el elegido entonces!.
+
+>>>> $ python3 nn.py model_4 Train Balanced 99999 64
+
+Despues en aws correr:
+
+$ python3 nn.py model_4 Train Raw 99999 64

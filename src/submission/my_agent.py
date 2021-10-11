@@ -8,6 +8,7 @@ import tensorflow.keras as tfk
 
 class MyAgent(BaseAgent):
     def __init__(self, env, action_space, this_directory_path="./"):
+        self.name = "agent1"
         self.ALARM_RHO_THRESHOLD = 0.0
         self.RHO_THRESHOLD = 1.0
         self.RHO_THRESHOLD_RECONNECT = 1.0
@@ -21,9 +22,11 @@ class MyAgent(BaseAgent):
         self.bus_actions146 = np.load(os.path.join(this_directory_path, "data/bus_actions146_2021.npy"))
         self.bus_actions_62_146 = np.concatenate((self.bus_actions62, self.bus_actions146), axis=0)
         self.all_actions = np.concatenate((self.do_nothing_action_vect, self.bus_actions_62_146), axis=0)
+        self.disc_lines_before_cascade = []
+        self.last_alarm_trigger_timestep = -1
 
         model_name = "model_2-balanced"
-        # self.model = tfk.models.load_model(os.path.join(this_directory_path, "data/model/" + model_name + ".tf"))
+        # self.model = tfk.models.load_model(os.path.join(this_directory_path, "data/model/" + model_name + ".h5"))
 
         self.previous_rho_for_alarm = None
 
@@ -158,22 +161,46 @@ class MyAgent(BaseAgent):
         assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
         return combined_action
 
-    def process_alarm_action(self, env, observation, alarm_features):
+    def calculate_zone_for_alarm(self, env, rho):
         alarms_lines_area = env.alarms_lines_area
         alarms_area_names = env.alarms_area_names
         zone_for_each_lines = alarms_lines_area
-        line_most_overloaded = np.argmax(observation.rho)
-        line_name = observation.name_line[line_most_overloaded]
-        # Some lines are in more than one area, which one to chose ?
+
+        ####### from disc_lines_before_cascade
+        combined_disc_lines_before_cascade = np.concatenate(self.disc_lines_before_cascade).astype(int)
+        if len(combined_disc_lines_before_cascade) > 0:
+            last_disconnected_line = combined_disc_lines_before_cascade[len(combined_disc_lines_before_cascade) - 1]
+            print("last_disconnected_line:", last_disconnected_line)
+            line_name = env.name_line[last_disconnected_line]
+            zone_name = zone_for_each_lines[line_name][0]
+            zone_index = [alarms_area_names.index(zone_name)]
+            return zone_index
+        ########
+
+        # From line most overloaded
+        line_most_overloaded = np.argmax(rho)
+        line_name = env.name_line[line_most_overloaded]
         zone_name = zone_for_each_lines[line_name][0]
-        #'east' = 0, 'middle' = 1, 'west' = 2
         zone_index = [alarms_area_names.index(zone_name)]
-        alarm_action = self.action_space({"raise_alarm": zone_index})
+        return zone_index
 
-        # prediction = self.model.predict(np.array([alarm_features]))[0]
-        # print("ALARM PREDICTION:", prediction)
+    def naive_alarm_action(self, timestep, env, rho):
+        assert timestep >= self.last_alarm_trigger_timestep
+        if rho.max() < 1.1:
+            return None
+        if timestep - self.last_alarm_trigger_timestep < 7:
+            return None
 
+        zone_index = self.calculate_zone_for_alarm(env, rho)
+        alarm_action = env.action_space({"raise_alarm": zone_index})
         return alarm_action
+
+    def nn_alarm_action(self, current_time_step, env, observation):
+        alarm_features = self.extract_alarm_features(observation)
+
+    def process_alarm_action(self, env, observation, current_time_step):
+        # return nn_alarm_action(current_time_step, env, observation.rho)
+        return self.naive_alarm_action(current_time_step, env, observation.rho)
 
     def extract_alarm_features(self, obs):
         if self.previous_rho_for_alarm is None:
@@ -239,22 +266,26 @@ class MyAgent(BaseAgent):
 
     def act(self, observation, reward, done):
         env = observation._obs_env
-
-        self._calc_sub_topo_dict(observation)
         current_time_step = env.nb_time_step
+        if current_time_step < 1:
+            self.last_alarm_trigger_timestep = -1
+            self.disc_lines_before_cascade = []
+
+        self.disc_lines_before_cascade.append(list(np.where(observation.line_status == False)[0]))
+        if (len(self.disc_lines_before_cascade)) > 4:
+            self.disc_lines_before_cascade.pop(0)
+        self._calc_sub_topo_dict(observation)
         some_line_disconnected = not np.all(observation.topo_vect != -1)
 
         alarm_action = None
         alarm_is_legal = observation.attention_budget[0] >= 1.0
-        if alarm_is_legal and (observation.rho.max() > self.ALARM_RHO_THRESHOLD or some_line_disconnected):
-            print("Timestep:", current_time_step)
-            # alarm_features = self.extract_alarm_features(observation)
-            alarm_features = None
-            alarm_action = self.process_alarm_action(env, observation, alarm_features)
+        if alarm_is_legal and ((observation.rho.max() > self.ALARM_RHO_THRESHOLD) or some_line_disconnected):
+            alarm_action = self.process_alarm_action(env, observation, current_time_step)
+            if alarm_action != None:
+                self.last_alarm_trigger_timestep = current_time_step
         self.previous_rho_for_alarm = observation.rho
 
         if some_line_disconnected:
-            # TODO: Mix reconnect action with other actions ??
             action = self._reconnect_action(observation)
             if action is not None:
                 return self.combine_actions(alarm_action, action, observation)
@@ -268,8 +299,6 @@ class MyAgent(BaseAgent):
                     return self.combine_actions(alarm_action, action, observation)
             _, _, done, _ = observation.simulate(self.do_nothing_action)
             observation._obs_env._reset_to_orig_state()
-            # TODO: Should we simulate like PARL and do something else if this would fail? Sometimes done returns true
-            # assert not done
             action = self.do_nothing_action
             return self.combine_actions(alarm_action, action, observation)
 

@@ -134,9 +134,9 @@ if len(sys.argv) < 6:
     print("Not enough arguments. USAGE: <model_X> <Train/Eval> <Raw/Balanced> <epochs> <batch_size>")
     exit()
 
-print("Num GPUs Available: ", len(tf.config.list_physical_devices("GPU")))
-gpu = tf.test.is_gpu_available(cuda_only=True)
-assert gpu
+# print("Num GPUs Available: ", len(tf.config.list_physical_devices("GPU")))
+# gpu = tf.test.is_gpu_available(cuda_only=True)
+# assert gpu
 
 
 model_name = str(sys.argv[1])
@@ -150,9 +150,9 @@ epochs = int(sys.argv[4])  # 300
 batch_size = int(sys.argv[5])  # 64
 
 if BALANCED:
-    model_path = "data/model/" + model_name + "-balanced" + ".tf"
+    model_path = "data/model/" + model_name + "-balanced" + ".h5"
 else:
-    model_path = "data/model/" + model_name + ".tf"
+    model_path = "data/model/" + model_name + ".h5"
 
 if EVAL:
     eval_model(model_path, BALANCED)
@@ -195,14 +195,17 @@ print("Model built OK..")
 # model.summary()
 # tf.keras.utils.plot_model(model, "img/" + model_name + ".png", show_shapes=True)
 
-EPOCH_SAVE_INTERVAL = 5
+EPOCH_SAVE_INTERVAL = 50
+
+if BALANCED:
+    save_path = "data/model/" + model_name + "-balanced" + "-weights.{epoch:02d}-{accuracy:.4f}" + ".h5"
+else:
+    save_path = "data/model/" + model_name + "-weights.{epoch:02d}-{accuracy:.4f}" + ".h5"
 
 model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-    filepath=model_path,
+    filepath=save_path,
     save_weights_only=False,
-    monitor="accuracy",
-    mode="max",
-    save_best_only=True,
+    save_best_only=False,
     save_freq="epoch",
     period=EPOCH_SAVE_INTERVAL,
 )
@@ -211,6 +214,7 @@ if BALANCED:
     SINGLE_FILE = True
 else:
     SINGLE_FILE = False
+
 if SINGLE_FILE:
     model.fit(input_data, labels, epochs=epochs, batch_size=batch_size, callbacks=[model_checkpoint_callback])
 else:
@@ -228,7 +232,7 @@ else:
             labels = training_data["labels"]
             model.fit(input_data, labels, epochs=epochs, batch_size=batch_size, callbacks=[model_checkpoint_callback])
 
-model.save(model_path)
+model.save(save_path)
 print("Saved model to disk")
 
 # _, accuracy = model.evaluate(input_data, labels)
