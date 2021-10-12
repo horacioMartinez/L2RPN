@@ -701,9 +701,9 @@ Remove alarm features:
 python3 remove_alarm_features.py data/nn_val_data/ && python3 remove_alarm_features.py data/nn_training_data/ && python3 remove_alarm_features.py data/nn_training_data_balanced/ && python3 remove_alarm_features.py data/nn_val_data_balanced/
 
 $ python3 remove_alarm_features.py data/nn_val_data/ 
-$ python3 remove_alarm_features.py data/nn_training_data/ 
 $ python3 remove_alarm_features.py data/nn_training_data_balanced/ 
 $ python3 remove_alarm_features.py data/nn_val_data_balanced/
+$ python3 remove_alarm_features.py data/nn_training_data/ 
 
 Verificar CUDA:
 nvcc -V
@@ -912,6 +912,31 @@ model_4 es el elegido entonces!.
 
 >>>> $ python3 nn.py model_4 Train Balanced 99999 64
 
+(eval): python3 nn.py model_4-balanced-?? Eval Balanced 0 0
+
 Despues en aws correr:
 
-$ python3 nn.py model_4 Train Raw 99999 64
+CORRIENDO EN AWS:
+
+$ python3 nn.py model_4 Train Raw 5 64
+
+(eval): python3 nn.py model_4-?? Eval Raw 0 0
+accuracy: 99.54%
+Accuracy of always picking False: 99.45538492186722 %
+
+$ python3.9 tune_alarm.py 100 naive "[[1.0, 1.5], [1.5, 2], [2, 2.5], [2.5, 3]]" "[1.5, 1.25, 1.1, 1.0]" "[7,7,7,7]"
+-> 24.58 alarm score
+
+test submission con ^:
+0            score    39.032606
+1         duration   256.833387
+2  total_operation    45.475151
+3  total_attention    24.000000
+
+$ python3.9 eval.py Eval 50 1 0 
+
+-> Average survived timesteps: 3999.48
+-> Average alarm score: 6.88
+
+>> Verificar que lo de no hacer accion si hay 3 lienas en desconectadas para evitar que nuestra accion cause game over esta funcionando bien <<
+( PROBARLO EN EVAL.PY)

@@ -1,5 +1,6 @@
 from os import listdir
 from os.path import isfile, join
+import ast
 import copy
 import pickle
 import math
@@ -20,8 +21,9 @@ from grid2op.Reward.BaseReward import BaseReward
 from grid2op.Reward import RedispReward
 from grid2op.Agent import BaseAgent
 from alarm import Alarm
-import tensorflow as tf
-import tensorflow.keras as tfk
+
+# import tensorflow as tf
+# import tensorflow.keras as tfk
 
 # Podemos poner como reward cuanto aumenta el rho 7 episodios despues de sonar la alarma.
 # O sera, que tan cerca esta de game over ??
@@ -121,14 +123,28 @@ def calculate_zone_for_alarm(env, rho, disc_lines_before_cascade):
     return zone_index
 
 
-def naive_alarm_action(timestep, last_alarm_trigger_timestep, env, rho, features, disc_lines_before_cascade):
+def naive_alarm_action(
+    timestep, last_alarm_trigger_timestep, env, rho, features, disc_lines_before_cascade, alarm_budget
+):
     assert timestep >= last_alarm_trigger_timestep
-    some_line_disconnected = not np.all(features["topo_vect"] != -1)
-    if rho.max() < 1.1:  # and not some_line_disconnected:
-        return None
-    if timestep - last_alarm_trigger_timestep < 7:
+    assert alarm_budget >= 1.0
+    assert len(BUDGET_INTERVALS) == len(RHO_OR_PREDICTION_INTERVALS)
+    assert len(BUDGET_INTERVALS) == len(MIN_DELTA_TIMESTEP)
+    found = False
+    rho_or_prediction_threshold = -1
+    min_delta = -1
+    for i in range(0, len(BUDGET_INTERVALS)):
+        budget_interval = BUDGET_INTERVALS[i]
+        if budget_interval[0] <= alarm_budget <= budget_interval[1]:
+            found = True
+            rho_or_prediction_threshold = RHO_OR_PREDICTION_INTERVALS[i]
+            min_delta = MIN_DELTA_TIMESTEP[i]
+    assert found
+    if timestep - last_alarm_trigger_timestep < min_delta:
         return None
 
+    if rho.max() < rho_or_prediction_threshold:  # and not some_line_disconnected:
+        return None
     zone_index = calculate_zone_for_alarm(env, rho, disc_lines_before_cascade)
     alarm_action = env.action_space({"raise_alarm": zone_index})
     return alarm_action
@@ -150,6 +166,7 @@ def nn_alarm_action(
     )
     prediction = model.predict(np.array([processed_features]))[0][0]
     MIN_DELTA_TIMESTEP = 1
+    assert timestep >= last_alarm_trigger_timestep
     if timestep - last_alarm_trigger_timestep < (MIN_DELTA_TIMESTEP + 1):
         return None
     if alarm_budget > 2.0:
@@ -167,8 +184,10 @@ def nn_alarm_action(
     return alarm_action
 
 
-if len(sys.argv) < 2:
-    print("Not enough arguments. USAGE: <NumScenarios> <model_name>")
+if len(sys.argv) < 5:
+    print(
+        "Not enough arguments. USAGE: <NumScenarios> <model_name> <MIN_DELTA_TIMESTEP> <BUDGET_INTERVALS> <RHO_OR_PREDICTION_INTERVALS>"
+    )
     exit()
 
 number_of_scenarios = int(sys.argv[1])
@@ -177,9 +196,11 @@ model_name = str(sys.argv[2])
 if model_name != "naive":
     model = tfk.models.load_model(os.path.join("./data/model/" + model_name + ".h5"))
 
+BUDGET_INTERVALS = ast.literal_eval(str(sys.argv[3]))
+RHO_OR_PREDICTION_INTERVALS = ast.literal_eval(str(sys.argv[4]))
+MIN_DELTA_TIMESTEP = ast.literal_eval(str(sys.argv[5]))
 
-print(">>>>>>>>>>>> USE TUNE ALARM <<<<<<<<<<")
-assert False
+assert len(BUDGET_INTERVALS) == len(RHO_OR_PREDICTION_INTERVALS)
 
 SEED = 0
 random.seed(SEED)
@@ -214,7 +235,7 @@ for i in range(0, len(episodes_data)):
     if we_won:
         continue
     filtered_array.append(episodes_data[i])
-print("Filtered out", len(episodes_data) - len(filtered_array), "because we won")
+# print("Filtered out", len(episodes_data) - len(filtered_array), "because we won")
 episodes_data = filtered_array
 #
 
@@ -230,7 +251,7 @@ for i in range(0, len(episodes_data)):
             number_of_alarm_failures_due_to_action_leading_to_game_over += 1
             continue
     filtered_array.append(episodes_data[i])
-print("Filtered out", len(episodes_data) - len(filtered_array), "due to our action leading to game over")
+# print("Filtered out", len(episodes_data) - len(filtered_array), "due to our action leading to game over")
 episodes_data = filtered_array
 #
 
@@ -276,7 +297,7 @@ for episode_data in episodes_data:
                 elif episode_data_timestep - 7 not in episode_data_timesteps_record:
                     number_of_alarm_failures_due_to_no_info_in_previous_timesteps += 1
 
-            print("Episode:", episode_name, " ALARM SCORE:", alarm_score)
+            # print("Episode:", episode_name, " ALARM SCORE:", alarm_score)
             alarm_scores.append(alarm_score)
             continue
         # Not done
@@ -303,7 +324,7 @@ for episode_data in episodes_data:
             # alarm_action = valid_actions[0]
             if model_name == "naive":
                 alarm_action = naive_alarm_action(
-                    timestep, last_alarm_trigger_timestep, env, rho, features, disc_lines_before_cascade
+                    timestep, last_alarm_trigger_timestep, env, rho, features, disc_lines_before_cascade, alarm.budget
                 )
             else:
                 alarm_action = nn_alarm_action(
@@ -322,31 +343,30 @@ for episode_data in episodes_data:
 
         alarm.update_timestep(timestep, raise_alarm_vect)
         # print(feature_rho)
-    print(
-        "<<<<<<<<<<<<<<<<<< DONE EPISODE:",
-        episode_data_index + 1,
-        "of",
-        len(episodes_data),
-        " Alarm score:",
-        alarm_scores[len(alarm_scores) - 1],
-    )
+    # print(
+    #     "<<<<<<<<<<<<<<<<<< DONE EPISODE:",
+    #     episode_data_index + 1,
+    #     "of",
+    #     len(episodes_data),
+    #     " Alarm score:",
+    #     alarm_scores[len(alarm_scores) - 1],
+    # )
     episode_data_index += 1
 
-print("Num episodes:", len(episode_names))
-print("Episodes:", episode_names)
-print("Alarm scores", alarm_scores)
+
 average_alarm_score = 0
 for alarm_score in alarm_scores:
     average_alarm_score += alarm_score
 average_alarm_score = average_alarm_score / len(alarm_scores)
-print("-> Average alarm score:", average_alarm_score)
 print(
-    "number_of_alarm_failures_due_to_no_info_in_previous_timesteps:",
-    number_of_alarm_failures_due_to_no_info_in_previous_timesteps,
+    "-> Average alarm score:",
+    average_alarm_score,
+    "Model:",
+    model_name,
+    "Num episodes:",
+    len(episode_names),
+    "Params:",
+    '"' + str(BUDGET_INTERVALS) + '"',
+    '"' + str(RHO_OR_PREDICTION_INTERVALS) + '"',
+    '"' + str(MIN_DELTA_TIMESTEP) + '"',
 )
-print(
-    "number_of_alarm_failures_due_to_action_leading_to_game_over:",
-    number_of_alarm_failures_due_to_action_leading_to_game_over,
-)
-
-print("FINISH!")

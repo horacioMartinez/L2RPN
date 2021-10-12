@@ -155,6 +155,7 @@ else:
     model_path = "data/model/" + model_name + ".h5"
 
 if EVAL:
+    model_path = "data/model/" + model_name + ".h5"
     eval_model(model_path, BALANCED)
     exit()
 
@@ -195,7 +196,7 @@ print("Model built OK..")
 # model.summary()
 # tf.keras.utils.plot_model(model, "img/" + model_name + ".png", show_shapes=True)
 
-EPOCH_SAVE_INTERVAL = 50
+EPOCH_SAVE_INTERVAL = 5
 
 if BALANCED:
     save_path = "data/model/" + model_name + "-balanced" + "-weights.{epoch:02d}-{accuracy:.4f}" + ".h5"

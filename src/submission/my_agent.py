@@ -183,23 +183,46 @@ class MyAgent(BaseAgent):
         zone_index = [alarms_area_names.index(zone_name)]
         return zone_index
 
-    def naive_alarm_action(self, timestep, env, rho):
-        assert timestep >= self.last_alarm_trigger_timestep
-        if rho.max() < 1.1:
+    def naive_alarm_action(self, timestep, env, observation):
+        rho = observation.rho
+        alarm_budget = observation.attention_budget
+        last_alarm_trigger_timestep = self.last_alarm_trigger_timestep
+        BUDGET_INTERVALS = [[1.0, 1.5], [1.5, 2], [2, 2.5], [2.5, 3]]
+        RHO_OR_PREDICTION_INTERVALS = [1.5, 1.25, 1.1, 1.0]
+        MIN_DELTA_TIMESTEP = [7, 7, 7, 7]
+
+        #######################################################
+        assert timestep >= last_alarm_trigger_timestep
+        assert alarm_budget >= 1.0
+        assert len(BUDGET_INTERVALS) == len(RHO_OR_PREDICTION_INTERVALS)
+        assert len(BUDGET_INTERVALS) == len(MIN_DELTA_TIMESTEP)
+        found = False
+        rho_or_prediction_threshold = -1
+        min_delta = -1
+        for i in range(0, len(BUDGET_INTERVALS)):
+            budget_interval = BUDGET_INTERVALS[i]
+            if budget_interval[0] <= alarm_budget <= budget_interval[1]:
+                found = True
+                rho_or_prediction_threshold = RHO_OR_PREDICTION_INTERVALS[i]
+                min_delta = MIN_DELTA_TIMESTEP[i]
+        assert found
+        if timestep - last_alarm_trigger_timestep < min_delta:
             return None
-        if timestep - self.last_alarm_trigger_timestep < 7:
+
+        if rho.max() < rho_or_prediction_threshold:  # and not some_line_disconnected:
             return None
+        #######################################################
 
         zone_index = self.calculate_zone_for_alarm(env, rho)
         alarm_action = self.action_space({"raise_alarm": zone_index})
         return alarm_action
 
     def nn_alarm_action(self, current_time_step, env, observation):
-        alarm_features = self.extract_alarm_features(observation)
+        processed_features = self.extract_alarm_features(observation)
 
     def process_alarm_action(self, env, observation, current_time_step):
-        # return nn_alarm_action(current_time_step, env, observation.rho)
-        return self.naive_alarm_action(current_time_step, env, observation.rho)
+        # return nn_alarm_action(current_time_step, env, observation)
+        return self.naive_alarm_action(current_time_step, env, observation)
 
     def extract_alarm_features(self, obs):
         if self.previous_rho_for_alarm is None:
@@ -278,7 +301,7 @@ class MyAgent(BaseAgent):
 
         alarm_action = None
         alarm_is_legal = observation.attention_budget[0] >= 1.0
-        if alarm_is_legal and ((observation.rho.max() > self.ALARM_RHO_THRESHOLD) or some_line_disconnected):
+        if alarm_is_legal:
             alarm_action = self.process_alarm_action(env, observation, current_time_step)
             if alarm_action != None:
                 self.last_alarm_trigger_timestep = current_time_step
