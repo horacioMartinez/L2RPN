@@ -940,3 +940,64 @@ $ python3.9 eval.py Eval 50 1 0
 
 >> Verificar que lo de no hacer accion si hay 3 lienas en desconectadas para evitar que nuestra accion cause game over esta funcionando bien <<
 ( PROBARLO EN EVAL.PY)
+
+con THRESHOLD_MAX_COUNT_DISCONNECTED_SIMUL = 2
+ $ python3.9 eval.py Eval 20 4 0/1/2/3
+Num timesteps 20  survived timesteps: [558, 8062, 308, 14, 1740, 2500, 3128, 239, 524, 792, 4836, 1033, 8062, 8062, 8062, 1975, 1142, 591, 7125, 1652]
+Alarm scores [36.0, 100.0, 96.0, 100.0, 64.0, 36.0, 36.0, 36.0, 64.0, -200.0, 96.0, 42.666666666666664, 100.0, 100.0, 100.0, 36.0, 36.0, 36.0, 64.0, 36.0]
+-> Average survived timesteps: 3020.25
+-> Average alarm score: 50.733333333333334
+
+Num timesteps 20  survived timesteps: [1961, 1632, 6583, 9, 2276, 7169, 3633, 6466, 6623, 1651, 8062, 1025, 2265, 978, 8062, 3197, 1142, 2360, 8062, 1652]
+Alarm scores [36.0, 36.0, 64.0, -200.0, 36.0, 64.0, 36.0, 24.0, 96.0, 64.0, 100.0, 36.0, -200.0, 36.0, 100.0, -200.0, 36.0, 96.0, 100.0, 36.0]
+-> Average survived timesteps: 3740.4
+-> Average alarm score: 19.8
+
+Num timesteps 20  survived timesteps: [580, 2508, 306, 2297, 3947, 1838, 468, 239, 8062, 8062, 3079, 2818, 2251, 2288, 617, 8062, 2995, 2357, 8062, 8062]
+Alarm scores [96.0, 64.0, 64.0, 36.0, 84.0, -200.0, 36.0, 36.0, 100.0, 100.0, 84.0, 84.0, 36.0, 96.0, 36.0, 100.0, 63.99999999999999, 36.0, 100.0, 100.0]
+-> Average survived timesteps: 3444.9
+-> Average alarm score: 57.6
+
+Num timesteps 20  survived timesteps: [827, 1643, 306, 8062, 8062, 3080, 3128, 8062, 523, 779, 1871, 1187, 2251, 2151, 617, 8062, 8062, 592, 5409, 1652]
+Alarm scores [84.0, -200.0, 64.0, 100.0, 100.0, 36.0, 36.0, 100.0, 36.0, 36.0, 36.0, 63.99999999999999, 36.0, 64.0, 36.0, 100.0, 100.0, 64.0, -200.0, 36.0]
+-> Average survived timesteps: 3316.3
+-> Average alarm score: 36.4
+
+avg:
+surv timestep: 3380
+alarm score: 40,75
+
+con THRESHOLD_MAX_COUNT_DISCONNECTED_SIMUL = 3 (Como estaba antes)
+
+Num timesteps 20  survived timesteps: [558, 8062, 308, 14, 1740, 2501, 3128, 239, 524, 790, 4836, 1033, 8062, 8062, 8062, 1975, 1142, 591, 8062, 1652]
+Alarm scores [36.0, 100.0, 96.0, 100.0, 64.0, 64.0, 36.0, 36.0, 64.0, -200.0, 96.0, 42.666666666666664, 100.0, 100.0, 100.0, 36.0, 36.0, 36.0, 100.0, 36.0]
+-> Average survived timesteps: 3067.05
+-> Average alarm score: 53.93333333333332
+
+Num timesteps 20  survived timesteps: [1953, 1632, 6583, 9, 2276, 8062, 3633, 8062, 6623, 1651, 6650, 1025, 2248, 978, 8062, 3197, 1142, 2360, 2862, 465]
+Alarm scores [-200.0, 36.0, 64.0, -200.0, 36.0, 100.0, 36.0, 100.0, 96.0, 64.0, -200.0, 36.0, -200.0, 36.0, 100.0, -200.0, 36.0, 96.0, -200.0, -200.0]
+-> Average survived timesteps: 3473.65
+-> Average alarm score: -28.2
+
+Num timesteps 20  survived timesteps: [5986, 2518, 306, 2297, 3113, 8062, 468, 239, 8062, 8062, 3086, 2818, 2250, 2287, 617, 8062, 8062, 2357, 8062, 8062]
+Alarm scores [36.0, 84.0, 64.0, 36.0, -200.0, 100.0, 36.0, 36.0, 100.0, 100.0, 96.0, 84.0, -200.0, 84.0, 36.0, 100.0, 100.0, 36.0, 100.0, 100.0]
+-> Average survived timesteps: 4238.8
+-> Average alarm score: 46.4
+
+Num timesteps 20  survived timesteps: [823, 1643, 306, 4611, 6582, 3099, 3128, 8062, 523, 778, 1871, 1191, 2251, 3027, 617, 8062, 8062, 592, 5412, 1652]
+Alarm scores [96.0, -200.0, 64.0, -200.0, -200.0, -200.0, 36.0, 100.0, 36.0, -200.0, 36.0, 64.0, 36.0, 64.0, 36.0, 100.0, 100.0, 64.0, 36.0, 36.0]
+-> Average survived timesteps: 3114.6
+-> Average alarm score: -4.8
+
+avg:
+surv timestep: 3473
+alarm score: 16,65
+
+
+con THRESHOLD_MAX_COUNT_DISCONNECTED_REAL = 3
+
+(Da peor)
+
+con THRESHOLD_MAX_COUNT_DISCONNECTED_REAL = 2
+
+Tambien da peor

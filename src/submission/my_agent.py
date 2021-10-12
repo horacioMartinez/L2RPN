@@ -347,7 +347,7 @@ class MyAgent(BaseAgent):
                 continue
 
             count_disconnected_sim = len(obs.rho) - np.count_nonzero(obs.rho)
-            THRESHOLD_MAX_COUNT_DISCONNECTED_SIMUL = 3
+            THRESHOLD_MAX_COUNT_DISCONNECTED_SIMUL = 2
             if count_disconnected_sim >= THRESHOLD_MAX_COUNT_DISCONNECTED_SIMUL:
                 continue
 
