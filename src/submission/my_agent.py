@@ -25,15 +25,15 @@ class MyAgent(BaseAgent):
         self.disc_lines_before_cascade = []
         self.last_alarm_trigger_timestep = -1
 
-        model_name = "model_2-balanced"
-        # self.model = tfk.models.load_model(os.path.join(this_directory_path, "data/model/" + model_name + ".h5"))
+        model_name = "model_4-weights.02-0.9955"
+        self.model = tfk.models.load_model(os.path.join(this_directory_path, "data/" + model_name + ".h5"))
 
         self.previous_rho_for_alarm = None
 
     def is_legal_bus_action(self, action, obs):
         adict = action.as_dict()
-        if "change_bus_vect" not in adict:
-            assert False
+        # if "change_bus_vect" not in adict:
+        # assert False
         substation_to_operate = int(adict["change_bus_vect"]["modif_subs_id"][0])
         if obs.time_before_cooldown_sub[substation_to_operate]:
             return False
@@ -68,7 +68,7 @@ class MyAgent(BaseAgent):
                             info_simulate,
                         ) = observation.simulate(act)
                         observation._obs_env._reset_to_orig_state()
-                        assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
+                        # assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
                         if not done_simulate and obs_simulate is not None and not any(np.isnan(obs_simulate.rho)):
                             if np.max(obs_simulate.rho) < 0.95:
                                 return act
@@ -87,10 +87,10 @@ class MyAgent(BaseAgent):
                     ) = observation.simulate(reconfig_sub)
                     observation._obs_env._reset_to_orig_state()
 
-                    assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
+                    # assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
 
-                    if not done_simulate:
-                        assert np.any(obs_simulate.topo_vect != observation.topo_vect)  # have some impact
+                    # if not done_simulate:
+                    # assert np.any(obs_simulate.topo_vect != observation.topo_vect)  # have some impact
 
                     if not done_simulate and obs_simulate is not None and not any(np.isnan(obs_simulate.rho)):
                         if np.max(obs_simulate.rho) < 0.95:
@@ -110,7 +110,7 @@ class MyAgent(BaseAgent):
                     info_simulate,
                 ) = observation.simulate(act)
                 observation._obs_env._reset_to_orig_state()
-                assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
+                # assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
                 if not done_simulate and obs_simulate is not None and not any(np.isnan(obs_simulate.rho)):
                     if np.max(obs_simulate.rho) < 0.99:
                         return act
@@ -158,7 +158,7 @@ class MyAgent(BaseAgent):
             info_simulate,
         ) = observation.simulate(combined_action)
         observation._obs_env._reset_to_orig_state()
-        assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
+        # assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
         return combined_action
 
     def calculate_zone_for_alarm(self, env, rho):
@@ -187,15 +187,16 @@ class MyAgent(BaseAgent):
         rho = observation.rho
         alarm_budget = observation.attention_budget
         last_alarm_trigger_timestep = self.last_alarm_trigger_timestep
-        BUDGET_INTERVALS = [[1.0, 1.5], [1.5, 2], [2, 2.5], [2.5, 3]]
-        RHO_OR_PREDICTION_INTERVALS = [1.5, 1.25, 1.1, 1.0]
-        MIN_DELTA_TIMESTEP = [7, 7, 7, 7]
+
+        BUDGET_INTERVALS = [[1.0, 2.5], [2.5, 3.0]]
+        RHO_OR_PREDICTION_INTERVALS = [1.024, 1.024]
+        MIN_DELTA_TIMESTEP = [5, 7]
 
         #######################################################
-        assert timestep >= last_alarm_trigger_timestep
-        assert alarm_budget >= 1.0
-        assert len(BUDGET_INTERVALS) == len(RHO_OR_PREDICTION_INTERVALS)
-        assert len(BUDGET_INTERVALS) == len(MIN_DELTA_TIMESTEP)
+        # assert timestep >= last_alarm_trigger_timestep
+        # assert alarm_budget >= 1.0
+        # assert len(BUDGET_INTERVALS) == len(RHO_OR_PREDICTION_INTERVALS)
+        # assert len(BUDGET_INTERVALS) == len(MIN_DELTA_TIMESTEP)
         found = False
         rho_or_prediction_threshold = -1
         min_delta = -1
@@ -205,9 +206,10 @@ class MyAgent(BaseAgent):
                 found = True
                 rho_or_prediction_threshold = RHO_OR_PREDICTION_INTERVALS[i]
                 min_delta = MIN_DELTA_TIMESTEP[i]
-        assert found
-        if timestep - last_alarm_trigger_timestep < min_delta:
-            return None
+        # assert found
+        if self.last_alarm_trigger_timestep > 0:
+            if timestep - last_alarm_trigger_timestep < min_delta:
+                return None
 
         if rho.max() < rho_or_prediction_threshold:  # and not some_line_disconnected:
             return None
@@ -217,12 +219,56 @@ class MyAgent(BaseAgent):
         alarm_action = self.action_space({"raise_alarm": zone_index})
         return alarm_action
 
-    def nn_alarm_action(self, current_time_step, env, observation):
+    def nn_alarm_action(self, timestep, env, observation):
+        rho = observation.rho
+        alarm_budget = observation.attention_budget
+        last_alarm_trigger_timestep = self.last_alarm_trigger_timestep
+
+        BUDGET_INTERVALS = [[1.0, 3]]
+        RHO_OR_PREDICTION_INTERVALS = [0.2]
+        MIN_DELTA_TIMESTEP = [5]
+
+        #######################################################
+        # assert timestep >= last_alarm_trigger_timestep
+        # assert alarm_budget >= 1.0
+        # assert len(BUDGET_INTERVALS) == len(RHO_OR_PREDICTION_INTERVALS)
+        # assert len(BUDGET_INTERVALS) == len(MIN_DELTA_TIMESTEP)
+        found = False
+        rho_or_prediction_threshold = -1
+        min_delta = -1
+        trigger_index = -1
+        for i in range(0, len(BUDGET_INTERVALS)):
+            budget_interval = BUDGET_INTERVALS[i]
+            if budget_interval[0] <= alarm_budget <= budget_interval[1]:
+                found = True
+                rho_or_prediction_threshold = RHO_OR_PREDICTION_INTERVALS[i]
+                min_delta = MIN_DELTA_TIMESTEP[i]
+                trigger_index = i
+        # assert found
+        if self.last_alarm_trigger_timestep > 0:
+            if timestep - last_alarm_trigger_timestep < min_delta:
+                return None
+        #######################################################
+
         processed_features = self.extract_alarm_features(observation)
+        prediction = self.model.predict(np.array([processed_features]))[0][0]
+        if prediction < rho_or_prediction_threshold:
+            return None
+        zone_index = self.calculate_zone_for_alarm(env, rho)
+        alarm_action = self.action_space({"raise_alarm": zone_index})
+        return alarm_action
 
     def process_alarm_action(self, env, observation, current_time_step):
-        # return nn_alarm_action(current_time_step, env, observation)
-        return self.naive_alarm_action(current_time_step, env, observation)
+        # return self.naive_alarm_action(current_time_step, env, observation)
+        # return self.nn_alarm_action(current_time_step, env, observation)
+        now = time.time()
+        time_delta = int(now - self.start_time)
+
+        alarm_action = self.naive_alarm_action(current_time_step, env, observation)
+
+        if alarm_action == None and time_delta < 175:
+            alarm_action = self.nn_alarm_action(current_time_step, env, observation)
+        return alarm_action
 
     def extract_alarm_features(self, obs):
         if self.previous_rho_for_alarm is None:
@@ -233,23 +279,23 @@ class MyAgent(BaseAgent):
         processed_features = np.array([])
 
         # feature_actions_rho = features["actions_rho"]
-        feature_rho = np.copy(obs.rho)
-        feature_topo_vect = np.copy(obs.topo_vect)
-        feature_load_p = np.copy(obs.load_p)
-        feature_load_q = np.copy(obs.load_q)
-        feature_load_v = np.copy(obs.load_v)
-        feature_gen_p = np.copy(obs.gen_p)
-        feature_gen_q = np.copy(obs.gen_q)
-        feature_gen_v = np.copy(obs.gen_v)
+        feature_rho = obs.rho
+        feature_topo_vect = obs.topo_vect
+        feature_load_p = obs.load_p
+        feature_load_q = obs.load_q
+        feature_load_v = obs.load_v
+        feature_gen_p = obs.gen_p
+        feature_gen_q = obs.gen_q
+        feature_gen_v = obs.gen_v
         feature_month = obs.month
         feature_day = obs.day
         feature_day_of_week = obs.day_of_week
         feature_hour_of_day = obs.hour_of_day
         feature_minute_of_hour = obs.minute_of_hour
-        feature_timestep_overflow = np.copy(obs.timestep_overflow)
-        feature_time_before_cooldown_line = np.copy(obs.time_before_cooldown_line)
-        feature_time_before_cooldown_sub = np.copy(obs.time_before_cooldown_sub)
-        feature_time_next_maintenance = np.copy(obs.time_next_maintenance)
+        feature_timestep_overflow = obs.timestep_overflow
+        feature_time_before_cooldown_line = obs.time_before_cooldown_line
+        feature_time_before_cooldown_sub = obs.time_before_cooldown_sub
+        feature_time_next_maintenance = obs.time_next_maintenance
 
         processed_features = (
             np.concatenate(
@@ -282,8 +328,8 @@ class MyAgent(BaseAgent):
             .astype(np.float32)
         )
 
-        assert not np.isnan(processed_features).any()
-        assert len(processed_features) == 690
+        # assert not np.isnan(processed_features).any()
+        # assert len(processed_features) == 690
         return processed_features
 
     def act(self, observation, reward, done):
@@ -292,6 +338,7 @@ class MyAgent(BaseAgent):
         if current_time_step < 1:
             self.last_alarm_trigger_timestep = -1
             self.disc_lines_before_cascade = []
+            self.start_time = time.time()
 
         self.disc_lines_before_cascade.append(list(np.where(observation.line_status == False)[0]))
         if (len(self.disc_lines_before_cascade)) > 4:
@@ -326,14 +373,17 @@ class MyAgent(BaseAgent):
 
         o, _, d, info_simulate = observation.simulate(self.do_nothing_action)
         observation._obs_env._reset_to_orig_state()
-        assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
+        # assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
 
         min_rho = o.rho.max() if not d else 9999
 
         # 1-depth simulation search of action with least rho.
         selected_action = self.action_space({})
         min_rho = 99
+        # count_disconnected_real = len(observation.rho) - np.count_nonzero(observation.rho)
         for action_vect in self.all_actions:
+            # if count_disconnected_real >= 2:
+            # continue
             action = self.action_space.from_vect(action_vect)
             is_legal = self.is_legal_action(action, observation)
 
@@ -342,7 +392,7 @@ class MyAgent(BaseAgent):
 
             obs, _, done, info_simulate = observation.simulate(action)
             observation._obs_env._reset_to_orig_state()
-            assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
+            # assert not info_simulate["is_illegal"] and not info_simulate["is_ambiguous"]
             if done:
                 continue
 

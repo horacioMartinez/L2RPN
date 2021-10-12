@@ -21,6 +21,12 @@ from tensorflow.python.keras.layers.advanced_activations import LeakyReLU
 from tensorflow.python.keras.models import Sequential
 from tensorflow.keras.layers.experimental.preprocessing import Normalization
 
+import os
+
+tf.get_logger().setLevel("INFO")
+tf.autograph.set_verbosity(1)
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
 
 def build_model_1(input_data):
     norm_layer = Normalization()
@@ -196,7 +202,7 @@ print("Model built OK..")
 # model.summary()
 # tf.keras.utils.plot_model(model, "img/" + model_name + ".png", show_shapes=True)
 
-EPOCH_SAVE_INTERVAL = 5
+EPOCH_SAVE_INTERVAL = 2
 
 if BALANCED:
     save_path = "data/model/" + model_name + "-balanced" + "-weights.{epoch:02d}-{accuracy:.4f}" + ".h5"

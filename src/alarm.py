@@ -151,12 +151,12 @@ class Alarm:
             return self.reward_max * 100
 
         if len(self.triggered_alarms) == 0:
-            print("XXXXXXXXXXXXX")
+            # print("XXXXXXXXXXXXX")
             # no alarm have been sent, so it's the minimum
             return self.reward_min * 100
 
         if len(disconnected_lines_at_game_over) == 0:
-            print("UUUUUUUUUUU")
+            # print("UUUUUUUUUUU")
             # game over is not caused by the tripping of a powerline
             return self.reward_min * 100
 
