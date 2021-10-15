@@ -1,0 +1,57 @@
+src/utils
+src/input_data_local
+src/data
+src/data/buckets.pkl
+evaluation-output-data
+logs-evals
+logs-train
+
+#Stuff
+*~
+*.a
+*.o
+*.log
+*.bin
+*.cache
+*.dat
+*.out
+.vscode
+dist
+node_modules
+yarn-error.log
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+cmake_install.cmake
+install_manifest.txt
+main
+.DS_Store
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/

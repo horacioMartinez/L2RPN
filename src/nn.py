@@ -21,12 +21,6 @@ from tensorflow.python.keras.layers.advanced_activations import LeakyReLU
 from tensorflow.python.keras.models import Sequential
 from tensorflow.keras.layers.experimental.preprocessing import Normalization
 
-import os
-
-tf.get_logger().setLevel("INFO")
-tf.autograph.set_verbosity(1)
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-
 
 def build_model_1(input_data):
     norm_layer = Normalization()
@@ -152,8 +146,8 @@ if not EVAL:
 BALANCED = str(sys.argv[3]) == "Balanced"
 if not BALANCED:
     assert str(sys.argv[3]) == "Raw"
-epochs = int(sys.argv[4])  # 300
-batch_size = int(sys.argv[5])  # 64
+epochs = int(sys.argv[4])
+batch_size = int(sys.argv[5])
 
 if BALANCED:
     model_path = "data/model/" + model_name + "-balanced" + ".h5"
@@ -176,8 +170,6 @@ with open(data_path, "rb") as f:
 input_data = training_data["input_data"]
 labels = training_data["labels"]
 
-if len(input_data[0]) == 694:
-    print("REMOVE ALARM FEATURES !!")
 assert len(input_data[0]) == 690
 
 print("Building model..")
@@ -202,7 +194,7 @@ print("Model built OK..")
 # model.summary()
 # tf.keras.utils.plot_model(model, "img/" + model_name + ".png", show_shapes=True)
 
-EPOCH_SAVE_INTERVAL = 2
+EPOCH_SAVE_INTERVAL = 10
 
 if BALANCED:
     save_path = "data/model/" + model_name + "-balanced" + "-weights.{epoch:02d}-{accuracy:.4f}" + ".h5"
@@ -217,10 +209,11 @@ model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
     period=EPOCH_SAVE_INTERVAL,
 )
 
-if BALANCED:
-    SINGLE_FILE = True
-else:
-    SINGLE_FILE = False
+SINGLE_FILE = True
+# if BALANCED:
+#    SINGLE_FILE = True
+# else:
+#    SINGLE_FILE = False
 
 if SINGLE_FILE:
     model.fit(input_data, labels, epochs=epochs, batch_size=batch_size, callbacks=[model_checkpoint_callback])

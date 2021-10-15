@@ -14,7 +14,6 @@ import time
 import numpy as np
 from multiprocessing import cpu_count
 
-# No scientific notation
 np.set_printoptions(suppress=True)
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -25,7 +24,6 @@ def extract_timestep_features(timestep_data, previous_timestep_data):
 
     processed_features = np.array([])
 
-    # feature_actions_rho = features["actions_rho"]
     feature_rho = features["rho"]
     feature_topo_vect = features["topo_vect"]
     feature_load_p = features["load_p"]
@@ -42,11 +40,7 @@ def extract_timestep_features(timestep_data, previous_timestep_data):
     feature_timestep_overflow = features["timestep_overflow"]
     feature_time_before_cooldown_line = features["time_before_cooldown_line"]
     feature_time_before_cooldown_sub = features["time_before_cooldown_sub"]
-    feature_timesteps_since_last_attack = features["timesteps_since_last_attack"]
     feature_time_next_maintenance = features["time_next_maintence"]
-    feature_under_attack = features["under_attack"]
-    feature_attack_duration = features["opponent_attack_duration"]
-    feature_timesteps_since_ongoing_attack_started = features["timesteps_since_ongoing_attack_started"]
 
     if previous_timestep_data is None:
         feature_rho_delta = np.zeros_like(feature_rho)
@@ -54,18 +48,9 @@ def extract_timestep_features(timestep_data, previous_timestep_data):
         feature_last_timestep_rho = previous_timestep_data["features"]["rho"]
         feature_rho_delta = feature_last_timestep_rho - feature_rho
 
-    # Limit timesteps to 10 (because 11 is the max timesteps the alarm can wait to have a positive score)
-
-    # feature_time_before_cooldown_line[feature_time_before_cooldown_line > 10] = 11
-    # feature_time_before_cooldown_sub[feature_time_before_cooldown_sub > 10] = 11
-    # feature_time_next_maintenance[feature_time_next_maintenance > 10] = 99
     processed_features = (
         np.concatenate(
             (
-                [feature_under_attack],
-                [feature_attack_duration],
-                [feature_timesteps_since_last_attack],
-                [feature_timesteps_since_ongoing_attack_started],
                 feature_topo_vect,
                 feature_load_p,
                 feature_load_q,
@@ -121,7 +106,9 @@ random.seed(0)
 np.random.seed(0)
 
 
-episodes_data_files = [f for f in listdir(EPISODES_DATA_PATH) if isfile(join(EPISODES_DATA_PATH, f))]
+episodes_data_files = [
+    f for f in listdir(EPISODES_DATA_PATH) if (isfile(join(EPISODES_DATA_PATH, f)) and f != ".gitkeep")
+]
 random.shuffle(episodes_data_files)
 
 EPISODES_CHUNK_SIZE = 2500
@@ -222,9 +209,6 @@ for episode_data_file_chunk in episode_data_file_chunks:
 
     indices = np.arange(len(input_data))
 
-    # Set seed as sum of first input data so we can get reproducibility and different rand in different chunks
-    # seed = int(np.sum(input_data[0]) * 1000)
-    # np.random.seed(seed)
     np.random.shuffle(indices)
 
     shuffled_input_data = input_data[indices]

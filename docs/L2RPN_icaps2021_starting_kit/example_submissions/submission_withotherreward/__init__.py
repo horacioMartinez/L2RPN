@@ -1,2 +1,0 @@
-from .my_file_with_a_different_name import make_agent
-from .my_file_with_a_different_name import reward
